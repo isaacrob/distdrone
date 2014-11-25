@@ -1,0 +1,10 @@
+Metadata-Version: 1.0
+Name: distdrone
+Version: 1.23
+Summary: package to drive parallel drone swarm
+Home-page: http://github.com/isaacrob/paradrone
+Author: Isaac Robinson
+Author-email: isaacrob@me.com
+License: MIT
+Description: UNKNOWN
+Platform: UNKNOWN

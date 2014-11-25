@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+sudo apt-get install build-essential cmake git libgtk2.0-dev pkg-config python-dev python-numpy libavcodec-dev libavformat-dev libswscale-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libblas-dev liblapack-dev
+cd ~/
+wget http://downloads.sourceforge.net/project/opencvlibrary/opencv-unix/2.4.9/opencv-2.4.9.zip
+unzip opencv-2.4.9.zip
+cd opencv-2.4.9
+mkdir release
+cd release
+cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
+make
+sudo make install
+
+sudo apt-get install python-pip
+sudo pip install f2py ipython pyzmq scipy

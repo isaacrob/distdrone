@@ -1,0 +1,4 @@
+#!/usr/bin/env python
+import distdrone
+predictor=distdrone.imgproc.makepredictor()
+print "made predictor. not programmed to do anything else yet. "
