@@ -1,6 +1,6 @@
 #from .imgproc import *
 import gentimedist as gen
-import cv2, time, sys, cPickle, zmq, os, copy
+import cv2, time, sys, cPickle, zmq, os, copy, psutil
 from math import log
 from IPython.parallel import Client
 from scipy import stats
@@ -59,8 +59,21 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 	dview["getrunstate"]=getrunstate
 	dview["getmypid"]=getmypid
 	dview.execute("mypid=getmypid()")
+	myippid=-1
+	for proc in psutil.process_iter():
+		if proc.name()=='ipengine':
+			myippid=proc.pid
+	ippids=[]
+	dview.execute("enginepid=os.getpid()")
 	for i in range(numnodes):
-			print c[c.ids[i]]['mypid']
+		if not myippid==c[c.ids[i]]['enginepid']:
+			ippids.append(c.ids[i])
+	dview=c.activate(ippids)
+	
+	print dview
+	numnodes=len(dview)
+	rejects=numnodes-len(c.ids)
+	print "configured for this pi by rejecting a certain engine"
 	print sys.platform
 	if sys.platform=='darwin':
 		facedetector=cv2.CascadeClassifier("/usr/local/Cellar/opencv/2.4.9/share/OpenCV/haarcascades/haarcascade_frontalface_alt2.xml")
@@ -71,7 +84,7 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 	times=gen.loadtimes()
 	scale=1.1
 	dview["scale"]=scale
-	for i in c.ids:
+	for i in ippids:
 		c[i].execute('if sys.platform=="darwin": haarface=cv2.CascadeClassifier("/usr/local/Cellar/opencv/2.4.9/share/OpenCV/haarcascades/haarcascade_frontalface_alt2.xml")')
 		c[i].execute('if sys.platform=="linux2": haarface=cv2.CascadeClassifier("/home/pi/opencv-2.4.9/data/haarcascades/haarcascade_frontalface_alt2.xml")')
 	
@@ -99,13 +112,13 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 			thresholds[i]=j
 		thresholds[numnodes]=numsizes-1
 		for i in range(numnodes):
-			c[c.ids[i]]['thismin']=tuple([trans[thresholds[i]]-1]*2)
-			c[c.ids[i]]['thismax']=tuple([trans[thresholds[i+1]]+1]*2)
+			c[ippids[i]]['thismin']=tuple([trans[thresholds[i]]-1]*2)
+			c[ippids[i]]['thismax']=tuple([trans[thresholds[i+1]]+1]*2)
 	predictdist(numnodes,times,numsizes,c)
 	
 	def findfaces(img,scale,serial):
 		starttime=time.time()
-		numnodes=len(c.ids)
+		numnodes=len(ippids)
 		img=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 		dview['img']=img
 		dview.execute('img=img.copy()')
@@ -123,9 +136,9 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 		thistimesremote=[None]*numnodes
 		for i in range(numnodes):
 			thistimes[i]=time.time()
-			print "checking engine "+str(c.ids[i])
-			thisfaces=c[c.ids[i]]["myfaces"]
-			thistimesremote[i]=c[c.ids[i]]["exectime"]
+			print "checking engine "+str(ippids[i])
+			thisfaces=c[ippids[i]]["myfaces"]
+			thistimesremote[i]=c[ippids[i]]["exectime"]
 			print len(thisfaces)
 			if len(thisfaces)>0:
 				for face in thisfaces:
@@ -201,7 +214,7 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 	std=stats.tstd(sumlist)
 	avg=sum(sumlist)/n
 	framenum=0
-	oldids=c.ids
+	oldids=ippids
 	
 	print "starting detection"
 	
@@ -274,7 +287,7 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 		#if framenum%100==0:
 		#	print framenum
 		if framenum%(10*numnodes)==0:
-			if not len(c.ids)==len(oldids):
+			if not len(c.ids)-len(oldids)==rejects:
 				print "cluster changed"
 				numnodes=len(c.ids)
 				dview=c[:]
@@ -293,20 +306,26 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 				#c.spin()
 				#trying reseting the client
 				c=Client(profile=profile)
-				dview=c[:]
+				dview=c[i]
+				myippid=-1
+				for proc in psutil.process_iter():
+					if proc.name()=='ipengine':
+						myippid=proc.pid
+				ippids=[]
+				dview.execute("enginepid=os.getpid()")
+				for i in range(numnodes):
+					if not myippid==c[c.ids[i]]['enginepid']:
+						ippids.append(c.ids[i])
+				dview=c.activate(ippids)
 
 
-def getalignface(facefinder,eyefinder,nosefinder,cam=False,img=[]):
+def getalignface(facefinder,eyefinder,nosefinder,cam):
 	cv2.destroyAllWindows()
-	if cam:
-		print "finding faces..."
-		retval,img=cam.read()
-		if not retval:
-			print "could not read image"
-	elif len(img)==0:
-		print "if not cam, must have img"
+	print "finding faces..."
+	retval,img=cam.read()
+	if not retval:
+		print "could not read image"
 	cv2.imshow("img",img)
-	cv2.waitKey(25)
 	#cv2.imshow("img",img)
 	dims=facefinder.detectMultiScale(img,1.1,5,1,(20,20),img.shape[:2])
 	print dims

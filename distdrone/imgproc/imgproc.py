@@ -131,8 +131,9 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 	dview["getrunstate"]=getrunstate
 	dview["getmypid"]=getmypid
 	dview.execute("mypid=getmypid()")
+	myippid=-1
 	for proc in psutil.process_iter():
-		if proc.name()='ipengine':
+		if proc.name()=='ipengine':
 			myippid=proc.pid
 	ippids={}
 	dview.execute("enginepid=os.getpid()")
@@ -140,6 +141,8 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 			ippids[c.ids[i]]=c[c.ids[i]]['enginepid']
 			#print ippids[c.ids[i]]
 	dview=[c[id] for id in ippids if not ippids[id]==myippid]
+	print dview
+	print "configured for this pi by rejecting a certain engine"
 	print sys.platform
 	if sys.platform=='darwin':
 		facedetector=cv2.CascadeClassifier("/usr/local/Cellar/opencv/2.4.9/share/OpenCV/haarcascades/haarcascade_frontalface_alt2.xml")
