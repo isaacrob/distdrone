@@ -296,13 +296,17 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 				dview=c[:]
 
 
-def getalignface(facefinder,eyefinder,nosefinder,cam):
+def getalignface(facefinder,eyefinder,nosefinder,cam=False,img=[]):
 	cv2.destroyAllWindows()
-	print "finding faces..."
-	retval,img=cam.read()
-	if not retval:
-		print "could not read image"
+	if cam:
+		print "finding faces..."
+		retval,img=cam.read()
+		if not retval:
+			print "could not read image"
+	elif len(img)==0:
+		print "if not cam, must have img"
 	cv2.imshow("img",img)
+	cv2.waitKey(25)
 	#cv2.imshow("img",img)
 	dims=facefinder.detectMultiScale(img,1.1,5,1,(20,20),img.shape[:2])
 	print dims

@@ -5,12 +5,13 @@ def readme():
 		return f.read()
 
 setup(name="distdrone",
-	version="1.23",
+	version="1.27",
 	description="package to drive parallel drone swarm",
-	url="http://github.com/isaacrob/paradrone",
+	url="https://github.com/isaacrob/distdrone",
 	author="Isaac Robinson",
 	author_email="isaacrob@me.com",
 	license="MIT",
 	packages=["distdrone","distdrone.motion","distdrone.imgproc"],
 	scripts=["bin/trigger","bin/testpredictor","bin/centersearch","bin/installdronedeps"],
+	keywords=['drone','OpenCV','IPython','parallel'],
 	zip_safe=False)
