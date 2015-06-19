@@ -5,7 +5,7 @@ Summary: package to drive parallel drone swarm
 Home-page: https://github.com/isaacrob/distdrone
 Author: Isaac Robinson
 Author-email: isaacrob@me.com
-License: MIT
+License: GNU
 Description: UNKNOWN
 Keywords: drone,OpenCV,IPython,parallel
 Platform: UNKNOWN

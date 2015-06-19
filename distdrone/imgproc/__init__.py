@@ -72,7 +72,7 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 	
 	print dview
 	numnodes=len(dview)
-	rejects=numnodes-len(c.ids)
+	rejects=len(c.ids)-numnodes
 	print "configured for this pi by rejecting a certain engine"
 	print sys.platform
 	if sys.platform=='darwin':
@@ -289,7 +289,7 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 		if framenum%(10*numnodes)==0:
 			if not len(c.ids)-len(oldids)==rejects:
 				print "cluster changed"
-				numnodes=len(c.ids)
+				numnodes=len(oldids)
 				dview=c[:]
 				print "repredicting even distribution..."
 				predictdist(numnodes,times,numsizes,c)
