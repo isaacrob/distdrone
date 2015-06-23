@@ -403,14 +403,14 @@ def getalignface(facefinder,eyefinder,nosefinder,cam):
                                         cv2.rectangle(thisface,(x,y),(x+w,y+h),(255,255,0),1)
 			else: #add parsing for more than 2 detected eyes without a nose
 				print "feature detection went wrong"
-				continue
+				return []
 			cv2.imshow("thisface features",thisface)
 			eye1mid=(finaleyes[0][0]+finaleyes[0][3]/2,finaleyes[0][1]+finaleyes[0][2]/2)
 			try:
 				eye2mid=(finaleyes[1][0]+finaleyes[1][3]/2,finaleyes[1][1]+finaleyes[1][2]/2)
 			except:
 				print "something went wrong with the format of eyes, skipping to next iteration"
-				continue
+				return []
 			if eye1mid[0]<eye2mid[0]:
 				lefteye=eye1mid
 				righteye=eye2mid
