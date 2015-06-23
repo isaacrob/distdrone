@@ -375,7 +375,7 @@ def getalignface(facefinder,eyefinder,nosefinder,cam):
 				eyenosedist=np.sqrt((eye[0]-nose[0])**2 + (eye[1]-nose[1])**2)
 				if nose[1]<eye[1]:
 					"apparently the only nose is above the only eye, aborting"
-					continue
+					return []
 				print "expanding face"
 				expandedface=biggestface[0]
 				expandedface[0]=expandedface[0]-eyenosedist/2
