@@ -6,6 +6,8 @@ from IPython.parallel import Client
 from scipy import stats
 import numpy as np
 
+os.chdir("/home/pi")
+
 def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False):
 	import sys, cPickle, os
 	pidfile=open('mypythonpid','w')
