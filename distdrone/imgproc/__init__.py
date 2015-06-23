@@ -41,18 +41,17 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 		import cv2,sys,time,math,os,cPickle,signal
 	#dview.execute("mypid=os.getpid()")
 	def getmypid():
-		import cPickle
+		import cPickle, os
 		try:
 			file=open('mypythonpid','r')
 			mypid=cPickle.load(file)
 			file.close()
-		except:
-			mypid=False
-		if mypid:
 			try:
 				os.kill(mypid,0)
 			except:
 				mypid=False
+		except:
+			mypid=False
 		return mypid
 	def getrunstate():
 		import cPickle
