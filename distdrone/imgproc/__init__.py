@@ -327,7 +327,7 @@ def getalignface(facefinder,eyefinder,nosefinder,cam):
 		print "could not read image"
 	cv2.imshow("img",img)
 	#cv2.imshow("img",img)
-	dims=facefinder.detectMultiScale(img,1.1,5,1,(20,20),img.shape[:2])
+	dims=facefinder.detectMultiScale(img,1.02,20,1,(20,20),img.shape[:2]) #for some reason, not consistant. fix
 	print dims
 	if len(dims)>0:
 		sizelist=[w for (x,y,h,w) in dims]
@@ -340,13 +340,15 @@ def getalignface(facefinder,eyefinder,nosefinder,cam):
 				thisface=img[x:(x+w),y:(y+h),:]
 				cleanface=copy.deepcopy(thisface)
 			cv2.imshow("thisface",thisface)
+			cv2.waitKey(35)
 			eyes=eyefinder.detectMultiScale(thisface,1.1,30,1)
 			noses=nosefinder.detectMultiScale(thisface,1.1,20,1)
 			print "eyes: "+str(eyes)
 			print "noses: "+str(noses)
+			if len(noses)>0:
+                        	maxnosesize=max([w for (x,y,h,w) in noses])
+                        	biggestnose=[[x,y,h,w] for (x,y,h,w) in noses if w==maxnosesize][0]
 			if len(noses)>0 and len(eyes)>1:
-				maxnosesize=max([w for (x,y,h,w) in noses])
-				biggestnose=[[x,y,h,w] for (x,y,h,w) in noses if w==maxnosesize][0]
 				finaleyes=[]
 				print "filtering out nostrils from the eyes..."
 				for eye in eyes:
@@ -359,22 +361,56 @@ def getalignface(facefinder,eyefinder,nosefinder,cam):
 				for (x,y,h,w) in [biggestnose]:
 					cv2.rectangle(thisface,(x,y),(x+w,y+h),(255,255,0),1)
 				#print biggestnose
-			elif len(eyes)>1 and len(eyes)<3:
+			elif len(eyes)==2:
 				print "could not find a nose, found 2 eyes. working with them"
 				for (x,y,h,w) in eyes:
 					cv2.rectangle(thisface,(x,y),(x+w,y+h),(0,255,255),1)
 				cv2.imshow("thisface",thisface)
 				finaleyes=eyes
+			elif len(eyes)==1 and len(noses)==1:
+				print "only found an eye and a nose, working with them"
+				eye=eyes[0]
+				nose=noses[0]
+				print eye, nose
+				eyenosedist=np.sqrt((eye[0]-nose[0])**2 + (eye[1]-nose[1])**2)
+				if nose[1]<eye[1]:
+					"apparently the only nose is above the only eye, aborting"
+					continue
+				print "expanding face"
+				expandedface=biggestface[0]
+				expandedface[0]=expandedface[0]-eyenosedist/2
+				expandedface[2]=expandedface[2]+eyenosedist   
+				expandedface[3]=expandedface[3]+eyenosedist 				
+				if eye[0]>nose[0]:
+					expandedface[1]=expandedface[1]-eyenosedist
+				for x,y,h,w in [expandedface]:
+					thisface=img[x:(x+w),y:(y+h),:]
+					cleanface=copy.deepcopy(thisface)
+				cv2.imshow("expandedface",thisface)
+				cv2.waitKey(35)
+				#time.sleep(5)
+				eyes=eyefinder.detectMultiScale(thisface,1.1,30)
+				originaleye=eye
+				finaleyes=[]
+				for eye in eyes:
+                                        if not (eye[0]>(biggestnose[0]-5) and eye[0]<(biggestnose[0]+biggestnose[3]+5) and eye[1]>(biggestnose[1]-5) and eye[1]<(biggestnose[1]+biggestnose[2]+5)):
+                                                finaleyes.append(eye)
+                                print "eyes: "+str(finaleyes)
+                                print "noses: "+str(noses)
+                                for (x,y,h,w) in finaleyes:
+                                        cv2.rectangle(thisface,(x,y),(x+w,y+h),(0,255,255),1)
+                                for (x,y,h,w) in [biggestnose]:
+                                        cv2.rectangle(thisface,(x,y),(x+w,y+h),(255,255,0),1)
 			else: #add parsing for more than 2 detected eyes without a nose
 				print "feature detection went wrong"
-				return []
+				continue
 			cv2.imshow("thisface features",thisface)
 			eye1mid=(finaleyes[0][0]+finaleyes[0][3]/2,finaleyes[0][1]+finaleyes[0][2]/2)
 			try:
 				eye2mid=(finaleyes[1][0]+finaleyes[1][3]/2,finaleyes[1][1]+finaleyes[1][2]/2)
 			except:
 				print "something went wrong with the format of eyes, skipping to next iteration"
-				return []
+				continue
 			if eye1mid[0]<eye2mid[0]:
 				lefteye=eye1mid
 				righteye=eye2mid
