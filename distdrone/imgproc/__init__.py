@@ -22,12 +22,12 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 	#port=5556
 	#pubsocket.bind("tcp://*:%s"%port)
 	#subsocket=context.socket(zmq.SUB)
-	if sys.platform=='darwin':
-		ips=open("/Users/isaac/Code/parastuff/ipaddresses").read()
-	if sys.platform=='linux2':
-		ips=open("/home/pi/ipaddresses").read()
-	splitips=ips.split("\n")
-	print splitips
+	#if sys.platform=='darwin':
+	#	ips=open("/Users/isaac/Code/parastuff/ipaddresses").read()
+	#if sys.platform=='linux2':
+	#	ips=open("/home/pi/ipaddresses").read()
+	#splitips=ips.split("\n")
+	#print splitips
 	#for ip in splitips:
 	#	if ip:
 	#		subsocket.connect("tcp://%s:%s"%(ip,port))
@@ -55,6 +55,10 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 			file=open('runstate','r')
 			state=cPickle.load(file)
 			file.close()
+			try:
+				os.kill(state,0)
+			except OSError:
+				state=0
 		except:
 			state=0
 		return state
@@ -123,12 +127,12 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 		numnodes=len(ippids)
 		img=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 		dview['img']=img
-		dview.execute('img=img.copy()')
-		dview.execute("mypid=getmypid()")
+		dview.execute('img=img.copy();mypid=getmypid()')
+		#dview.execute("mypid=getmypid()")
 		runstate=open('runstate','w')
 		cPickle.dump(1,runstate)
 		runstate.close()
-		dview.execute("state=getrunstate()")
+		dview.execute("state=getrunstate()") #may be redundant but avoids a lock
 		#for i in range(numnodes):
 		#	print c[c.ids[i]]["state"]
 		dview.execute("if mypid and not state: os.kill(mypid,signal.SIGTSTP)")
