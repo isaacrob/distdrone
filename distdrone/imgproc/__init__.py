@@ -9,7 +9,7 @@ import numpy as np
 os.chdir("/home/pi")
 
 def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False):
-	import sys, cPickle, os
+	import sys, cPickle, os,cv2,time,math,signal
 	pidfile=open('mypythonpid','w')
 	cPickle.dump(os.getpid(),pidfile)
 	pidfile.close()
@@ -37,8 +37,7 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 	dview=c[:]
 	numnodes=len(c.ids)
 	dview.block=False
-	with dview.sync_imports():
-		import cv2,sys,time,math,os,cPickle,signal
+	#dview.execute('import cv2,sys,time,math,os,cPickle,signal')
 	#dview.execute("mypid=os.getpid()")
 	def getmypid():
 		import cPickle, os
@@ -70,11 +69,12 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 		if proc.name()=='ipengine':
 			myippid=proc.pid
 	ippids=[]
-	dview.execute("enginepid=os.getpid()")
+	dview.execute("import os;enginepid=os.getpid()")
 	for i in range(numnodes):
 		if not myippid==c[c.ids[i]]['enginepid']:
 			ippids.append(c.ids[i])
 	dview=c.activate(ippids)
+	dview.execute('import cv2,sys,time,math,cPickle,signal')
 	
 	print dview
 	numnodes=len(dview)
@@ -298,7 +298,7 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 				numnodes=len(oldids)
 				dview=c[:]
 				print "repredicting even distribution..."
-				predictdist(numnodes,times,numsizes,c)
+				#predictdist(numnodes,times,numsizes,c)
 				for id in c.ids:
 					if id not in oldids:
 						c[id].execute('import cv2,sys,time,math,os,cPickle,signal;myfaces=[]')
@@ -308,21 +308,25 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 						c[id].execute('haarface=cv2.CascadeClassifier("/home/pi/opencv-2.4.9/data/haarcascades/haarcascade_frontalface_alt2.xml")')
 					#else:
 					#	c[id].execute('myfaces=[]')
-				oldids=c.ids
+				#oldids=c.ids
 				#c.spin()
 				#trying reseting the client
 				c=Client(profile=profile)
-				dview=c[i]
+				dview=c[:]
 				myippid=-1
 				for proc in psutil.process_iter():
 					if proc.name()=='ipengine':
 						myippid=proc.pid
 				ippids=[]
-				dview.execute("enginepid=os.getpid()")
-				for i in range(numnodes):
+				dview.execute("import os;enginepid=os.getpid()")
+				for i in range(len(c.ids)):
 					if not myippid==c[c.ids[i]]['enginepid']:
 						ippids.append(c.ids[i])
 				dview=c.activate(ippids)
+				numnodes=len(ippids)
+				oldids=ippids
+				rejects=len(c.ids)-numnodes
+				predictdist(numnodes,times,numsizes,c)
 
 
 def getalignface(facefinder,eyefinder,nosefinder,cam):
