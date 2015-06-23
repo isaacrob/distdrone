@@ -46,6 +46,10 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 			file=open('mypythonpid','r')
 			mypid=cPickle.load(file)
 			file.close()
+			try:
+				os.kill(mypid,0)
+			except:
+				mypid=False
 		except:
 			mypid=False
 		return mypid
@@ -55,10 +59,6 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 			file=open('runstate','r')
 			state=cPickle.load(file)
 			file.close()
-			try:
-				os.kill(state,0)
-			except OSError:
-				state=0
 		except:
 			state=0
 		return state
