@@ -5,7 +5,7 @@ def readme():
 		return f.read()
 
 setup(name="distdrone",
-	version="1.38",
+	version="1.39",
 	description="package to drive parallel drone swarm",
 	url="https://github.com/isaacrob/distdrone",
 	author="Isaac Robinson",
