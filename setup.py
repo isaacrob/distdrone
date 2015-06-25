@@ -24,9 +24,9 @@ import os, socket
 #call(['sudo','tcpdump','-Z','pi'])
 os.chdir('/home/pi/.ipython')
 call(['rm','-rf','profile_picluster'])
-call(['git','clone','https://github.com/isaacrob/picluster','profile_picluster'])
+call(['sudo','-u','pi','git','clone','https://github.com/isaacrob/picluster','profile_picluster'])
 s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 s.connect(('8.8.8.8',80))
 myip=s.getsockname()[0]
 os.chdir('profile_picluster')
-call(['python','writeremotehosts.py','--controller_ip='+myip])
+call(['sudo','-u','pi','python','writeremotehosts.py','--controller_ip='+myip])
