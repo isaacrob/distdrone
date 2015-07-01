@@ -5,6 +5,7 @@ from distutils.command.install import install as _install
 
 def _post_install(dir):
 	global call
+	call(['pip','install','-e','.'])
 	try:
 		os.chdir('/home/pi/.ipython')
 	except:
