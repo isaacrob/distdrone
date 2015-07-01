@@ -9,6 +9,8 @@ def _post_install(dir):
 		os.chdir('/home/pi/.ipython')
 	except:
 		os.mkdir('/home/pi/.ipython')
+		call(['chown','pi','/home/pi/.ipython'])
+		call(['chmod','777','/home/pi/.ipython'])
 		os.chdir('/home/pi/.ipython')
 	call(['rm','-rf','profile_picluster'])
 	call(['sudo','-u','pi','git','clone','https://github.com/isaacrob/picluster','profile_picluster'])
