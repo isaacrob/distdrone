@@ -5,7 +5,11 @@ from distutils.command.install import install as _install
 
 def _post_install(dir):
 	global call
-	os.chdir('/home/pi/.ipython')
+	try:
+		os.chdir('/home/pi/.ipython')
+	except:
+		os.mkdir('/home/pi/.ipython')
+		os.chdir('/home/pi/.ipython')
 	call(['rm','-rf','profile_picluster'])
 	call(['sudo','-u','pi','git','clone','https://github.com/isaacrob/picluster','profile_picluster'])
 	s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
