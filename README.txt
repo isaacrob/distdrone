@@ -1,5 +1,4 @@
 This is much of the backbone for my, Isaac Robinson's, high school science project.
-Although it may not seem like it, almost a year of work has gone into this.
 The idea is that a drone swarm where the drones work together to process difficult tasts, 
 such as image processing, will be much more efficient, especially if that task has 
 a certain threshold beyond which it becomes relevant. Here, that task is facial detection
