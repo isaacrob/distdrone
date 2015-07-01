@@ -27,7 +27,3 @@ it at once without ever exploring the same portion of the simulated space twice.
 litte algorithms that make this, along with other things, possible are defined in gears.
 There are other things provided by this package. Email me if you would care to know what 
 they are, and I will provide a write up for all of them.
-
--------------------------------------------------------------------------------------------
-
-note to self: after installation (both of package and dronedeps), add ip of new pi to cluster config and restart cluster, then run trigger. will upload exact configuration files soon
