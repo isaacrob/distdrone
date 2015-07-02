@@ -189,14 +189,15 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		myspotlist=[]
 		for spot in genmyspotlist(wallspot):
 			if not (-1 in spot or len(map) in spot):
-				if map[spot[0],spot[1]]==-1 and any([map[spot2[0],spot2[1]]!=-1 for spot2 in genmyspotlist(spot)]):
+				if map[spot[0],spot[1]]==-1 and any([map[spot2[0],spot2[1]]!=-1 for spot2 in genmyspotlist(spot) if not (-1 in spot2 or len(map) in spot2)]):
 					myspotlist.append(spot)
 		#myspotlist=[spot for spot in genmyspotlist(wallspot) if map[spot[0],spot[1]]==-1 and any([map[spot2[0],spot2[1]]!=-1 for spot2 in genmyspotlist(spot)])]
 		fluffspots=set()
 		for spot in myspotlist:
 			for spot2 in genmyspotlist(spot):
-				if map[spot2[0],spot2[1]]!=-1 and checkcontinuity(myspot,genmyspotlist,map,spot2):
-					fluffspots.add(tuple(spot2))
+				if not (-1 in spot2 or len(map) in spot2):
+					if map[spot2[0],spot2[1]]!=-1 and checkcontinuity(myspot,genmyspotlist,map,spot2):
+						fluffspots.add(tuple(spot2))
 		if len(fluffspots)==0:
 			returnlist=[]
 			if abs(myspot[0]-wallspot[0])==1 and abs(myspot[1]-wallspot[1])==1:
