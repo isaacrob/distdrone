@@ -221,6 +221,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 			return [spot for spot in nearestpurge(genmyspotlist(wallspot),map) if checkcontinuity(myspot,genmyspotlist,map,spot)]
 		return [list(spot) for spot in list(fluffspots)]
 	def nearestpurge(myspotlist,map,continuity=False,nope=False):
+		origmyspotlist=tuple(myspotlist)
 		listofbadspots=[]
 		for i in range(0,8):
 			if len(map) in myspotlist[i] or -1 in myspotlist[i] or (not continuity and map[myspotlist[i][0],myspotlist[i][1]]==-1):# or map[myspotlist[i][0],myspotlist[i][1]]>1:
@@ -237,7 +238,16 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 			if map[spot[0],spot[1]]>1:
 				myspotlist.remove(spot)
 		if len(myspotlist)==0:
-			aowmeawemifwme
+			myspotlist=list(origmyspotlist)
+			listofbadspots=[]
+			for i in range(0,8):
+				if len(map) in myspotlist[i] or -1 in myspotlist[i] or (not continuity and map[myspotlist[i][0],myspotlist[i][1]]==-1):# or map[myspotlist[i][0],myspotlist[i][1]]>1:
+					listofbadspots.append(myspotlist[i])
+			for i in listofbadspots:
+				myspotlist.remove(i)
+			if len(myspotlist)==0:
+				oaoarairuguin
+			return myspotlist
 		return myspotlist
 	def findbestdirection(startspot,genmyspotlist,closestzero,map,continuity=False,nope=False):
 		myspotlist=nearestpurge(genmyspotlist(startspot),map,continuity,nope)
