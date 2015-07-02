@@ -185,14 +185,45 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		layerspots[4*(layer-1):6*(layer-1)-1]=varyx(mult=-1)
 		layerspots[6*(layer-1):8*(layer-1)-1]=varyy(mult=-1)
 		return layerspots
-	def nearestzero(myspot,map,nope):
-		myspotlist=genmyspotlist(myspot)
+	def findwalledge(myspot,wallspot,genmyspotlist,map):
+		myspotlist=[spot for spot in genmyspotlist(wallspot) if map[spot[0],spot[1]]==-1 and any([map[spot2[0],spot2[1]]!=-1 for spot2 in genmyspotlist(spot)])]
+		fluffspots=set()
+		for spot in myspotlist:
+			for spot2 in genmyspotlist(spot):
+				if map[spot2[0],spot2[1]]!=-1 and checkcontinuity(myspot,genmyspotlist,map,spot2):
+					fluffspots.add(tuple(spot2))
+		return [list(spot) for spot in list(fluffspots)]
+	def nearestpurge(myspotlist,map,continuity=False):
 		listofbadspots=[]
 		for i in range(0,8):
-			if len(map) in myspotlist[i] or -1 in myspotlist[i] or map[myspotlist[i][0],myspotlist[i][1]]==-1:
+			if len(map) in myspotlist[i] or -1 in myspotlist[i] or (not continuity and map[myspotlist[i][0],myspotlist[i][1]]==-1):
 				listofbadspots.append(myspotlist[i])
 		for i in listofbadspots:
 			myspotlist.remove(i)
+		return myspotlist
+	def findbestdirection(startspot,genmyspotlist,closestzero,map,continuity=False):
+		myspotlist=nearestpurge(genmyspotlist(startspot),map,continuity)
+		distlist=[None]*len(myspotlist)
+		for i in range(0,len(myspotlist)):
+			distlist[i]=sqrt((closestzero[0]-myspotlist[i][0])**2+(closestzero[1]-myspotlist[i][1])**2)
+		return tuple(myspotlist[distlist.index(min(distlist))])
+	def checkcontinuity(start,genmyspotlist,map,end,returnfinalpoint=False):
+		bestdirection=findbestdirection(start,genmyspotlist,end,map,True)
+		while map[bestdirection[0],bestdirection[1]]!=-1:
+			bestdirection=findbestdirection(bestdirection,genmyspotlist,end,map,True)
+			if list(bestdirection)==list(end):
+				if returnfinalpoint:
+					return [True,bestdirection]
+				return True
+		if returnfinalpoint:
+			return [False,bestdirection]
+		return False
+	dview['checkcontinuity']=checkcontinuity
+	dview['findbestdirection']=findbestdirection
+	dview['nearestpurge']=nearestpurge
+	dview['findwalledge']=findwalledge
+	def nearestzero(myspot,map,nope,genmyspotlist):
+		myspotlist=nearestpurge(genmyspotlist(myspot),map)
 		x,y=numpy.where(map==0)
 		zerospots=zip(x,y)
 		if len(zerospots)==0:
@@ -200,14 +231,26 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 			return myspot
 		zerodists=[None]*len(zerospots)
 		for i in range(0,len(zerospots)):
-			zerodists[i]=sqrt((myspot[0]-zerospots[i][0])**2+(myspot[1]-\
-				   zerospots[i][1])**2)
+			zerodists[i]=sqrt((myspot[0]-zerospots[i][0])**2+(myspot[1]-zerospots[i][1])**2)
 		closestzero=zerospots[zerodists.index(min(zerodists))]
-		distlist=[None]*len(myspotlist)
-		for i in range(0,len(myspotlist)):
-			distlist[i]=sqrt((closestzero[0]-myspotlist[i][0])**2+\
-					 (closestzero[1]-myspotlist[i][1])**2)
-		return tuple(myspotlist[distlist.index(min(distlist))])
+		bestdirection=findbestdirection(myspot,genmyspotlist,closestzero,map)
+		state,bestdirection2=checkcontinuity(bestdirection,genmyspotlist,map,closestzero,True)
+		if state:
+			return bestdirection
+		fluffspots=findwalledge(myspot,bestdirection2,genmyspotlist,map)
+		possiblebestspots=[]
+		for spot in fluffspots:
+			if checkcontinuity(closestzero,genmyspotlist,map,spot):
+				possiblebestspots.append(spot)
+		if len(possiblebestspots)==0:
+			distlist=[]
+			for spot in fluffspots:
+				distlist.append(sqrt((spot[0]-myspot[0])**2+(spot[1]-myspot[1])**2))
+			return findbestdirection(myspot,genmyspotlist,fluffspots[distlist.index(min(distlist))],map)
+		distlist=[]
+		for spot in possiblebestspots:
+			distlist.append(sqrt((spot[0]-myspot[0])**2+(spot[1]-myspot[1])**2)+sqrt((spot[0]-closestzero[0])**2+(spot[1]-closestzero[1])**2))
+		return findbestdirection(myspot,genmyspotlist,possiblebestspots[distlist.index(min(distlist))],map)
 	dview['nearestzero']=nearestzero
 	dims=(size,size)
 	background=numpy.zeros(dims)
@@ -322,7 +365,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		#			nope=nope[len(nope)-1]
 		myspotlist=purgelist(myspotlist,map,nope)
 		if len(myspotlist)==0:
-			return [nearestzero(myspot,map),0]
+			return [nearestzero(myspot,map,False,genmyspotlist),0]
 		#if len(myspotlist)==1:
 		#	return list(tuple(myspotlist[0]),1)
 		distlist=[None]*len(myspotlist)
