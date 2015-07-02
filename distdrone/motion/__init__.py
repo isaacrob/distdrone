@@ -1,5 +1,5 @@
 from IPython.parallel import Client
-import os, sys
+import os, sys, pygame
 from .gears import *
 
 def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
@@ -18,6 +18,8 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		import numpy
 		from math import sqrt, ceil
 		import time, sys
+	
+	pygame.init()
 
 	numworkers=len(c.ids)
 	#size=int(raw_input('How large of an area? '))
@@ -207,13 +209,24 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 					 (closestzero[1]-myspotlist[i][1])**2)
 		return tuple(myspotlist[distlist.index(min(distlist))])
 	dview['nearestzero']=nearestzero
-	background=numpy.zeros((size,size))
+	dims=(size,size)
+	background=numpy.zeros(dims)
+	boxsize=7
+	screen=pygame.display.set_mode((dims[0]*boxsize,dims[1]*boxsize))
+	rectlist=numpy.zeros(dims,dtype=object)
+	for i in xrange(dims[0]):
+		for j in xrange(dims[1]):
+			rectlist[i,j]=pygame.draw.rect(screen,(0,0,0),(i*boxsize,j*boxsize,boxsize,boxsize),0)
 	#background[4,0]=2
 	spots=[None]*numworkers
+	mostrecentoldspots=[]*numworkers
 	def updatemap():
 		for spot in spots:
-			background[spot[0],spot[1]]=background[spot[0],spot[1]]+1;
-
+			background[spot[0],spot[1]]=background[spot[0],spot[1]]+1
+			screen.fill((0,0,255),rectlist[spot[0],spot[1]])
+		for spot in mostrecentoldspots:
+			screen.fill((255,255,255),rectlist[spot[0],spot[1]])
+		pygame.display.update()
 	#define different search methods and push to engines
 	def purgelist(myspotlist,map,nope=False,best=False):
 		if nope:
@@ -325,6 +338,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 	midspot=tuple([size/2,size/2])
 	midspots=genmyspotlist(midspot)
 	background[midspot[0],midspot[1]]=1 #saying center of release is known
+	screen.fill((255,255,255),rectlist[midspot[0],midspot[1]])
 	if numworkers<=8:
 		spots=midspots[:numworkers]
 		for i in range(numworkers):
@@ -350,14 +364,15 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 	print 'starting the search'
 	print 'iteration '+str(iteration)
 	print background
+	center=[None,None]
 
 	while 0 in background:
 		dview=c[:]
+		mostrecentoldspots=list(spots)
 		if iteration==1:
 			print 'starting at '+str(spots)
 		#else:
 		#	print str(oldspots[iteration-2])+' >>> '+str(spots)
-		center=[None,None]
 		center[0]=sum([x for x,y in spots])/len(spots)
 		center[1]=sum([y for x,y in spots])/len(spots)
 		starttime=time.time()
@@ -440,3 +455,4 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		print "imperfect"
 	else:
 		print "perfect"
+	time.sleep(1000000000)
