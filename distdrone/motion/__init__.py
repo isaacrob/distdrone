@@ -186,20 +186,38 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		layerspots[6*(layer-1):8*(layer-1)-1]=varyy(mult=-1)
 		return layerspots
 	def findwalledge(myspot,wallspot,genmyspotlist,map,nope=False):
-		myspotlist=[spot for spot in genmyspotlist(wallspot) if map[spot[0],spot[1]]==-1 and any([map[spot2[0],spot2[1]]!=-1 for spot2 in genmyspotlist(spot)])]
+		myspotlist=[]
+		for spot in genmyspotlist(wallspot):
+			if not (-1 in spot or len(map) in spot):
+				if map[spot[0],spot[1]]==-1 and any([map[spot2[0],spot2[1]]!=-1 for spot2 in genmyspotlist(spot)]):
+					myspotlist.append(spot)
+		#myspotlist=[spot for spot in genmyspotlist(wallspot) if map[spot[0],spot[1]]==-1 and any([map[spot2[0],spot2[1]]!=-1 for spot2 in genmyspotlist(spot)])]
 		fluffspots=set()
 		for spot in myspotlist:
 			for spot2 in genmyspotlist(spot):
 				if map[spot2[0],spot2[1]]!=-1 and checkcontinuity(myspot,genmyspotlist,map,spot2):
 					fluffspots.add(tuple(spot2))
 		if len(fluffspots)==0:
+			returnlist=[]
 			if abs(myspot[0]-wallspot[0])==1 and abs(myspot[1]-wallspot[1])==1:
 				return [[wallspot[0],myspot[1]],[myspot[0],wallspot[1]]]
 			elif abs(myspot[0]-wallspot[0])==1:
-				return [[wallspot[0],wallspot[1]-1],[wallspot[0],wallspot[1]+1],[myspot[0],myspot[1]-1],[myspot[0],myspot[1]+1]]
+				if not myspot[1]-1<0:
+					returnlist.append([wallspot[0],wallspot[1]-1])
+					returnlist.append([myspot[0],myspot[1]-1])
+				if not myspot[1]+1>=len(map):
+					returnlist.append([wallspot[0],wallspot[1]+1])
+					returnlist.append([myspot[0],myspot[1]+1])
+				return returnlist
 			elif abs(myspot[1]-wallspot[1])==1:
-				return [[wallspot[0]+1,wallspot[1]],[wallspot[0]-1,wallspot[1]],[myspot[0]+1,myspot[1]],[myspot[0]-1,myspot[1]]]
-			return [spot for spot in genmyspotlist(wallspot) if checkcontinuity(myspot,genmyspotlist,map,spot)]
+				if not myspot[0]-1<0:
+					returnlist.append([wallspot[0]-1,wallspot[1]])
+					returnlist.append([myspot[0]-1,myspot[1]])
+				if not myspot[0]+1>=len(map):
+					returnlist.append([wallspot[0]+1,wallspot[1]])
+					returnlist.append([myspot[0]+1,myspot[1]])
+				return returnlist
+			return [spot for spot in nearestpurge(genmyspotlist(wallspot),map) if checkcontinuity(myspot,genmyspotlist,map,spot)]
 		return [list(spot) for spot in list(fluffspots)]
 	def nearestpurge(myspotlist,map,continuity=False,nope=False):
 		listofbadspots=[]
@@ -241,7 +259,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 				if returnfinalpoint:
 					return [True,bestdirection]
 				return True
-			if list(previousbest)==list(bestdirection):
+			if list(previousbest)==list(bestdirection) or list(start)==list(bestdirection):
 				if returnfinalpoint:
 					return [False,bestdirection]
 				return False
