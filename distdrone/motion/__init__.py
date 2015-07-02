@@ -185,11 +185,11 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		layerspots[4*(layer-1):6*(layer-1)-1]=varyx(mult=-1)
 		layerspots[6*(layer-1):8*(layer-1)-1]=varyy(mult=-1)
 		return layerspots
-	def nearestzero(myspot,map):
+	def nearestzero(myspot,map,nope):
 		myspotlist=genmyspotlist(myspot)
 		listofbadspots=[]
 		for i in range(0,8):
-			if len(map) in myspotlist[i] or -1 in myspotlist[i]:
+			if len(map) in myspotlist[i] or -1 in myspotlist[i] or map[myspotlist[i][0],myspotlist[i][1]]==-1:
 				listofbadspots.append(myspotlist[i])
 		for i in listofbadspots:
 			myspotlist.remove(i)
@@ -242,6 +242,8 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		screen.blit(font.render(' >',1,(0,0,0)),forward)
 		if done:
 			screen.blit(font.render('           exit',1,(0,0,0)),pause)
+		else:
+			screen.blit(font.render('           continue',1,(0,0,0)),pause)
 		pygame.display.update([pause,back,forward])
 		proceed=0
 		depth=1
@@ -273,6 +275,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 					if done:
 						sys.exit("exiting")
 					screen.fill((255,0,0),pause)
+					screen.blit(font.render(' pause',1,(0,0,0)),pause)
 					screen.fill((255,0,0),back)
 					screen.fill((255,0,0),forward)
 					for i in xrange(depth-1):
@@ -301,8 +304,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 						myspotlist.remove(nope[i])
 		listofbadspots=[]
 		for i in range(0,len(myspotlist)):
-			if len(map) in myspotlist[i] or -1 in myspotlist[i] or map[\
-						 myspotlist[i][0],myspotlist[i][1]]!=0:
+			if len(map) in myspotlist[i] or -1 in myspotlist[i] or map[myspotlist[i][0],myspotlist[i][1]]!=0:
 				listofbadspots.append(myspotlist[i])
 		for i in listofbadspots:
 			myspotlist.remove(i)
@@ -325,8 +327,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		#	return list(tuple(myspotlist[0]),1)
 		distlist=[None]*len(myspotlist)
 		for i in range(len(distlist)):
-			distlist[i]=sqrt((center[0]-myspotlist[i][0])**2+(center[1]-\
-						myspotlist[i][1])**2)
+			distlist[i]=sqrt((center[0]-myspotlist[i][0])**2+(center[1]-myspotlist[i][1])**2)
 		bestspot=tuple(myspotlist[distlist.index(max(distlist))])
 		bestspotlist=purgelist(genmyspotlist(bestspot),map,myspot,1)
 		locklist=[]
@@ -375,8 +376,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 			myspotlist.remove(nope)
 		listofbadspots=[]
 		for i in range(0,len(myspotlist)):
-			if len(map) in myspotlist[i] or -1 in myspotlist[i] or map[\
-						 myspotlist[i][0],myspotlist[i][1]]!=0:
+			if len(map) in myspotlist[i] or -1 in myspotlist[i] or map[myspotlist[i][0],myspotlist[i][1]]!=0:
 				listofbadspots.append(myspotlist[i])
 		for i in listofbadspots:
 			myspotlist.remove(i)
@@ -389,8 +389,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 			return tuple(myspotlist[0])
 		distlist=[None]*len(myspotlist)
 		for i in range(0,len(distlist)):
-			distlist[i]=sqrt((center[0]-myspotlist[i][0])**2+(center[1]-\
-						myspotlist[i][1])**2)
+			distlist[i]=sqrt((center[0]-myspotlist[i][0])**2+(center[1]-myspotlist[i][1])**2)
 		return tuple(myspotlist[distlist.index(min(distlist))])
 	#only difference between the 2 algorithms is min v max in the last line
 	dview["centerseek"]=centerseek
@@ -422,6 +421,33 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 	#start the search
 	if clearprompt=='y':
 		os.system('clear')
+	screen.blit(font.render(' click here to proceed',1,(0,0,0)),pause)
+	pygame.display.update(pause)
+	wall=0
+	while True:
+		event=pygame.event.wait()
+		if event.type==pygame.QUIT:
+			sys.exit("exiting")
+		elif event.type==pygame.MOUSEBUTTONDOWN:
+			x,y=event.pos
+			if pause.collidepoint(x,y):
+				screen.fill((255,0,0),pause)
+				screen.blit(font.render(' pause',1,(0,0,0)),pause)
+				pygame.display.update(pause)
+				break
+			else:
+				thisrect=rectlist[x/boxsize,y/boxsize]
+				if background[x/boxsize,y/boxsize]==0:
+					screen.fill((255,255,255),thisrect)
+					pygame.display.update(thisrect)
+					background[x/boxsize,y/boxsize]=-1
+					wall=wall+1
+				else:
+					screen.fill((0,0,0),thisrect)
+					pygame.display.update(thisrect)
+					background[x/boxsize,y/boxsize]=0
+					wall=wall-1
+		
 	print 'starting the search'
 	print 'iteration '+str(iteration)
 	print background
@@ -509,18 +535,17 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 				x,y=event.pos
 				if pause.collidepoint(x,y):
 					paused()
-				else:
-					screen.fill((0,255,0),rectlist[x/boxsize,y/boxsize])
+				#else:
+				#	screen.fill((0,255,0),rectlist[x/boxsize,y/boxsize])
 
 	#once done, print the final report
 	print 'final report: '
-	print "moves wasted: (doesn't account for necessary moves) "+str(-size**2+numworkers*iteration+1)
+	print "moves wasted: (doesn't account for necessary moves) "+str(-size**2+numworkers*iteration+1+wall)
 	print 'workers: '+str(numworkers)
 	print 'number of squares: '+str(size**2)
-	print 'extra iterations: '+str(iteration-ceil(size**2/numworkers))
-	print 'percent error in terms of iterations: '+str((iteration-\
-					ceil(size**2/numworkers\
-					))/iteration*100)+'%'
+	print 'size of wall: '+str(wall)
+	print 'extra iterations: '+str(iteration-ceil((size**2-wall)/numworkers))
+	print 'percent error in terms of iterations: '+str((iteration-ceil((size**2-wall)/numworkers))/iteration*100)+'%'
 	if alert==1:
 		print "imperfect"
 	else:
