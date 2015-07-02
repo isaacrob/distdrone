@@ -212,21 +212,82 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 	dims=(size,size)
 	background=numpy.zeros(dims)
 	boxsize=7
-	screen=pygame.display.set_mode((dims[0]*boxsize,dims[1]*boxsize))
+	screen=pygame.display.set_mode((dims[0]*boxsize,dims[1]*boxsize+20))
 	rectlist=numpy.zeros(dims,dtype=object)
 	for i in xrange(dims[0]):
 		for j in xrange(dims[1]):
 			rectlist[i,j]=pygame.draw.rect(screen,(0,0,0),(i*boxsize,j*boxsize,boxsize,boxsize),0)
+	pause=pygame.draw.rect(screen,(255,0,0),(0,dims[1]*boxsize,dims[0]*boxsize,20),0)
+	back=pygame.draw.rect(screen,(255,0,0),(0,dims[1]*boxsize,20,20),0)
+	forward=pygame.draw.rect(screen,(255,0,0),(20,dims[1]*boxsize,20,20),0)
+	font=pygame.font.SysFont('Ariel',20)
 	#background[4,0]=2
 	spots=[None]*numworkers
 	mostrecentoldspots=[]*numworkers
+	def randcolor():
+		val=lambda: numpy.random.randint(150,255)
+		return (val(),val(),numpy.random.randint(0,150))
 	def updatemap():
 		for spot in spots:
 			background[spot[0],spot[1]]=background[spot[0],spot[1]]+1
 			screen.fill((0,0,255),rectlist[spot[0],spot[1]])
 		for spot in mostrecentoldspots:
-			screen.fill((255,255,255),rectlist[spot[0],spot[1]])
+			screen.fill(randcolor(),rectlist[spot[0],spot[1]])
 		pygame.display.update()
+	def paused(done=False):
+		screen.fill((0,255,0),pause)
+		screen.fill((0,200,50),back)
+		screen.fill((0,200,50),forward)
+		screen.blit(font.render(' <',1,(0,0,0)),back)
+		screen.blit(font.render(' >',1,(0,0,0)),forward)
+		if done:
+			screen.blit(font.render('           exit',1,(0,0,0)),pause)
+		pygame.display.update([pause,back,forward])
+		proceed=0
+		depth=1
+		while proceed==0:
+			event2=pygame.event.wait()
+			if event2.type==pygame.MOUSEBUTTONDOWN:
+				x2,y2=event2.pos
+				if back.collidepoint(x2,y2):
+					if depth>len(oldspots)-1:
+						continue
+					print 'go back here'
+					for spot in oldspots[-depth]:
+						screen.fill((0,0,0),rectlist[spot[0],spot[1]])
+					depth=depth+1
+					for spot in oldspots[-depth]:
+						screen.fill((0,0,255),rectlist[spot[0],spot[1]])
+					pygame.display.update()
+				elif forward.collidepoint(x2,y2):
+					if depth<2:
+						continue
+					print 'go forward here'
+					for spot in oldspots[-depth]:
+						screen.fill(randcolor(),rectlist[spot[0],spot[1]])
+					depth=depth-1
+					for spot in oldspots[-depth]:
+						screen.fill((0,0,255),rectlist[spot[0],spot[1]])
+					pygame.display.update()
+				elif pause.collidepoint(x2,y2):
+					if done:
+						sys.exit("exiting")
+					screen.fill((255,0,0),pause)
+					screen.fill((255,0,0),back)
+					screen.fill((255,0,0),forward)
+					for i in xrange(depth-1):
+						for spot in oldspots[-depth+i]:
+							screen.fill(randcolor(),rectlist[spot[0],spot[1]])
+						for spot in oldspots[-depth+i+1]:
+							screen.fill((0,0,255),rectlist[spot[0],spot[1]])
+						time.sleep(.03)
+						pygame.display.update()
+					for spot in oldspots[-1]:
+						screen.fill((0,0,255),rectlist[spot[0],spot[1]])
+					pygame.display.update()
+					proceed=1
+			if event2.type==pygame.QUIT:
+				sys.exit("exiting")
 	#define different search methods and push to engines
 	def purgelist(myspotlist,map,nope=False,best=False):
 		if nope:
@@ -338,7 +399,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 	midspot=tuple([size/2,size/2])
 	midspots=genmyspotlist(midspot)
 	background[midspot[0],midspot[1]]=1 #saying center of release is known
-	screen.fill((255,255,255),rectlist[midspot[0],midspot[1]])
+	screen.fill(randcolor(),rectlist[midspot[0],midspot[1]])
 	if numworkers<=8:
 		spots=midspots[:numworkers]
 		for i in range(numworkers):
@@ -441,6 +502,15 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 				sys.exit("exiting")
 			else:
 				alert=1
+		for event in pygame.event.get():
+			if event.type==pygame.QUIT:
+				sys.exit("exiting")
+			if event.type==pygame.MOUSEBUTTONDOWN:
+				x,y=event.pos
+				if pause.collidepoint(x,y):
+					paused()
+				else:
+					screen.fill((0,255,0),rectlist[x/boxsize,y/boxsize])
 
 	#once done, print the final report
 	print 'final report: '
@@ -455,4 +525,4 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		print "imperfect"
 	else:
 		print "perfect"
-	time.sleep(1000000000)
+	paused(done=True)
