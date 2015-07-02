@@ -1,6 +1,6 @@
 Metadata-Version: 1.0
 Name: distdrone
-Version: 1.40
+Version: 1.42
 Summary: package to drive parallel drone swarm
 Home-page: https://github.com/isaacrob/distdrone
 Author: Isaac Robinson

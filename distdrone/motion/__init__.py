@@ -2,7 +2,7 @@ from IPython.parallel import Client
 import os, sys
 from .gears import *
 
-def centersearch(size,progo='picluster',clearprompt='n',algorithm='edge'):
+def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 	#like ipparasearch, but start from a clustered position
 	#use center-seeking and/or edge-seeking algorithm
 
@@ -11,6 +11,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edge'):
 	c=Client(profile=progo)
 	dview=c[:]
 	dview.block=False
+	dview.use_dill()
 
 	#import on engines
 	with dview.sync_imports():
@@ -94,26 +95,26 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edge'):
 	def genmyspotlist5(myspot): #-1+1 biased. need to bias according to start
 		myspot=list(myspot)
 		myspotlist=[None]*8
-		myspotlist[3]=(myspot[0]-1,myspot[1]-1)
+		myspotlist[4]=(myspot[0]-1,myspot[1]-1)
 		myspotlist[5]=(myspot[0],myspot[1]-1)
 		myspotlist[7]=(myspot[0]+1,myspot[1]-1)
 		myspotlist[2]=(myspot[0]-1,myspot[1])
 		myspotlist[6]=(myspot[0]+1,myspot[1])
 		myspotlist[0]=(myspot[0]-1,myspot[1]+1)
 		myspotlist[1]=(myspot[0],myspot[1]+1)
-		myspotlist[4]=(myspot[0]+1,myspot[1]+1)
+		myspotlist[3]=(myspot[0]+1,myspot[1]+1)
 		return myspotlist
 	def genmyspotlist2(myspot): #+1-1 biased. need to bias according to start
 		myspot=list(myspot)
 		myspotlist=[None]*8
-		myspotlist[4]=(myspot[0]-1,myspot[1]-1)
-		myspotlist[1]=(myspot[0],myspot[1]-1)
+		myspotlist[3]=(myspot[0]-1,myspot[1]-1)
+		myspotlist[2]=(myspot[0],myspot[1]-1)
 		myspotlist[0]=(myspot[0]+1,myspot[1]-1)
 		myspotlist[6]=(myspot[0]-1,myspot[1])
-		myspotlist[2]=(myspot[0]+1,myspot[1])
+		myspotlist[1]=(myspot[0]+1,myspot[1])
 		myspotlist[7]=(myspot[0]-1,myspot[1]+1)
 		myspotlist[5]=(myspot[0],myspot[1]+1)
-		myspotlist[3]=(myspot[0]+1,myspot[1]+1)
+		myspotlist[4]=(myspot[0]+1,myspot[1]+1)
 		return myspotlist
 	def genmyspotlist1(myspot): #0-1 biased. need to bias according to start
 		myspot=list(myspot)
@@ -121,8 +122,8 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edge'):
 		myspotlist[2]=(myspot[0]-1,myspot[1]-1)
 		myspotlist[0]=(myspot[0],myspot[1]-1)
 		myspotlist[1]=(myspot[0]+1,myspot[1]-1)
-		myspotlist[3]=(myspot[0]-1,myspot[1])
-		myspotlist[4]=(myspot[0]+1,myspot[1])
+		myspotlist[4]=(myspot[0]-1,myspot[1])
+		myspotlist[3]=(myspot[0]+1,myspot[1])
 		myspotlist[6]=(myspot[0]-1,myspot[1]+1)
 		myspotlist[7]=(myspot[0],myspot[1]+1)
 		myspotlist[5]=(myspot[0]+1,myspot[1]+1)
@@ -133,8 +134,8 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edge'):
 		myspotlist[5]=(myspot[0]-1,myspot[1]-1)
 		myspotlist[7]=(myspot[0],myspot[1]-1)
 		myspotlist[6]=(myspot[0]+1,myspot[1]-1)
-		myspotlist[4]=(myspot[0]-1,myspot[1])
-		myspotlist[3]=(myspot[0]+1,myspot[1])
+		myspotlist[3]=(myspot[0]-1,myspot[1])
+		myspotlist[4]=(myspot[0]+1,myspot[1])
 		myspotlist[1]=(myspot[0]-1,myspot[1]+1)
 		myspotlist[0]=(myspot[0],myspot[1]+1)
 		myspotlist[2]=(myspot[0]+1,myspot[1]+1)
@@ -143,24 +144,24 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edge'):
 		myspot=list(myspot)
 		myspotlist=[None]*8
 		myspotlist[6]=(myspot[0]-1,myspot[1]-1)
-		myspotlist[3]=(myspot[0],myspot[1]-1)
+		myspotlist[4]=(myspot[0],myspot[1]-1)
 		myspotlist[2]=(myspot[0]+1,myspot[1]-1)
 		myspotlist[7]=(myspot[0]-1,myspot[1])
 		myspotlist[0]=(myspot[0]+1,myspot[1])
 		myspotlist[5]=(myspot[0]-1,myspot[1]+1)
-		myspotlist[4]=(myspot[0],myspot[1]+1)
+		myspotlist[3]=(myspot[0],myspot[1]+1)
 		myspotlist[1]=(myspot[0]+1,myspot[1]+1)
 		return myspotlist
 	def genmyspotlist3(myspot): #-10 biased. need to bias according to start
 		myspot=list(myspot)
 		myspotlist=[None]*8
 		myspotlist[1]=(myspot[0]-1,myspot[1]-1)
-		myspotlist[4]=(myspot[0],myspot[1]-1)
+		myspotlist[3]=(myspot[0],myspot[1]-1)
 		myspotlist[5]=(myspot[0]+1,myspot[1]-1)
 		myspotlist[0]=(myspot[0]-1,myspot[1])
 		myspotlist[7]=(myspot[0]+1,myspot[1])
 		myspotlist[2]=(myspot[0]-1,myspot[1]+1)
-		myspotlist[3]=(myspot[0],myspot[1]+1)
+		myspotlist[4]=(myspot[0],myspot[1]+1)
 		myspotlist[6]=(myspot[0]+1,myspot[1]+1)
 		return myspotlist
 	#dview['genmyspotlist']=genmyspotlist
@@ -207,6 +208,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edge'):
 		return tuple(myspotlist[distlist.index(min(distlist))])
 	dview['nearestzero']=nearestzero
 	background=numpy.zeros((size,size))
+	#background[4,0]=2
 	spots=[None]*numworkers
 	def updatemap():
 		for spot in spots:
@@ -232,7 +234,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edge'):
 			myspotlist.remove(i)
 		return myspotlist
 	dview["purgelist"]=purgelist
-	def edgeseek(center,myspot,map,nope=False):
+	def edgeseek(center,myspot,map,nope,genmyspotlist):
 		if type(myspot[0])==tuple:
 			myspot=myspot[0]
 		oktogo=0
@@ -364,7 +366,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edge'):
 		if algorithm=='centerseek':
 			dview['center']=midspot
 		dview['map']=background
-		dview.execute('[newspot,mylocks]='+algorithm+'(center,myspot,map)')
+		dview.execute('[newspot,mylocks]='+algorithm+'(center,myspot,map,False,genmyspotlist)')
 		locklist=[]
 		for i in c.ids:
 			thislocks=c[i]["mylocks"]
@@ -387,13 +389,13 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edge'):
 				#if crashtest==3:
 				#	sys.exit('drone '+str(i)+' stalled')
 				c[i].execute("locklist.append(newspot)")
-				c[i].execute('[newspot,mylocks]='+algorithm+'(center,myspot,map,locklist)')
+				c[i].execute('[newspot,mylocks]='+algorithm+'(center,myspot,map,locklist,genmyspotlist)')
 				intermid=c[i]['newspot']
 				if intermid in spots:
 					#print "possible meta problem with "+str(c.ids[spots.index(intermid)])
 					spots[c.ids.index(i)]=intermid
 					c[c.ids[spots.index(intermid)]].execute("locklist.append(newspot)")
-					c[c.ids[spots.index(intermid)]].execute('[newspot,mylocks]='+algorithm+'(center,myspot,map,locklist)')
+					c[c.ids[spots.index(intermid)]].execute('[newspot,mylocks]='+algorithm+'(center,myspot,map,locklist,genmyspotlist)')
 					spots[spots.index(intermid)]=c[c.ids[spots.index(intermid)]]["newspot"]
 				#if spots[i]==oldspots[iteration-1][i]:
 				#	crashtest=crashtest+1
@@ -403,7 +405,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edge'):
 						#c[i].execute("locklist=[newspot,]")
 						c[i]["locklist"]=[intermid,]
 						#print c[i]["locklist"]
-						c[i].execute('[newspot,mylocks]='+algorithm+'(center,myspot,map,locklist)')
+						c[i].execute('[newspot,mylocks]='+algorithm+'(center,myspot,map,locklist,genmyspotlist)')
 						intermid=c[i]['newspot']
 						#print intermid
 						#print "possible contradiction problem here with "+str(i)
