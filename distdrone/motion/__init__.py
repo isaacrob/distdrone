@@ -192,6 +192,14 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 			for spot2 in genmyspotlist(spot):
 				if map[spot2[0],spot2[1]]!=-1 and checkcontinuity(myspot,genmyspotlist,map,spot2):
 					fluffspots.add(tuple(spot2))
+		if len(fluffspots)==0:
+			if abs(myspot[0]-wallspot[0])==1 and abs(myspot[1]-wallspot[1])==1:
+				return [[wallspot[0],myspot[1]],[myspot[0],wallspot[1]]]
+			elif abs(myspot[0]-wallspot[0])==1:
+				return [[wallspot[0],wallspot[1]-1],[wallspot[0],wallspot[1]+1],[myspot[0],myspot[1]-1],[myspot[0],myspot[1]+1]]
+			elif abs(myspot[1]-wallspot[1])==1:
+				return [[wallspot[0]+1,wallspot[1]],[wallspot[0]-1,wallspot[1]],[myspot[0]+1,myspot[1]],[myspot[0]-1,myspot[1]]]
+			return [spot for spot in genmyspotlist(wallspot) if checkcontinuity(myspot,genmyspotlist,map,spot)]
 		return [list(spot) for spot in list(fluffspots)]
 	def nearestpurge(myspotlist,map,continuity=False,nope=False):
 		listofbadspots=[]
@@ -219,8 +227,13 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 			distlist[i]=sqrt((closestzero[0]-myspotlist[i][0])**2+(closestzero[1]-myspotlist[i][1])**2)
 		return tuple(myspotlist[distlist.index(min(distlist))])
 	def checkcontinuity(start,genmyspotlist,map,end,returnfinalpoint=False,nope=False):
+		if list(start)==list(end):
+			if returnfinalpoint:
+				return [False,start]
+			return False
 		bestdirection=findbestdirection(start,genmyspotlist,end,map,True,nope)
 		origbestdirection=tuple(bestdirection)
+		previousbest=origbestdirection
 		count=0
 		while map[bestdirection[0],bestdirection[1]]!=-1:
 			bestdirection=findbestdirection(bestdirection,genmyspotlist,end,map,True,nope)
@@ -228,11 +241,16 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 				if returnfinalpoint:
 					return [True,bestdirection]
 				return True
+			if list(previousbest)==list(bestdirection):
+				if returnfinalpoint:
+					return [False,bestdirection]
+				return False
 			if list(origbestdirection)==bestdirection:
 				zzzzzzzzzzzzzzz
+			previousbest=tuple(bestdirection)
 			count+=1
 			if count>100:
-				sys.exit('yeah this is just looping...gonna cut it off')
+				sys.exit('yeah this is just looping...gonna cut it off, heres the data: '+str([start,origbestdirection,bestdirection,end]))
 		if returnfinalpoint:
 			return [False,bestdirection]
 		return False
