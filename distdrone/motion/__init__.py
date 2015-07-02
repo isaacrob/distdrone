@@ -190,7 +190,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		fluffspots=set()
 		for spot in myspotlist:
 			for spot2 in genmyspotlist(spot):
-				if map[spot2[0],spot2[1]]!=-1 and checkcontinuity(myspot,genmyspotlist,map,spot2,nope=nope):
+				if map[spot2[0],spot2[1]]!=-1 and checkcontinuity(myspot,genmyspotlist,map,spot2):
 					fluffspots.add(tuple(spot2))
 		return [list(spot) for spot in list(fluffspots)]
 	def nearestpurge(myspotlist,map,continuity=False,nope=False):
@@ -198,12 +198,19 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		for i in range(0,8):
 			if len(map) in myspotlist[i] or -1 in myspotlist[i] or (not continuity and map[myspotlist[i][0],myspotlist[i][1]]==-1):# or map[myspotlist[i][0],myspotlist[i][1]]>1:
 				listofbadspots.append(myspotlist[i])
+				#if continuity:
+					#sys.exit(str(map[myspotlist[i][0],myspotlist[i][1]]))
 		for i in listofbadspots:
 			myspotlist.remove(i)
 		if nope:
 			for i in range(len(nope)):
 				if nope[i] in myspotlist:
 					myspotlist.remove(nope[i])
+		for spot in myspotlist:
+			if map[spot[0],spot[1]]>1:
+				myspotlist.remove(spot)
+		if len(myspotlist)==0:
+			aowmeawemifwme
 		return myspotlist
 	def findbestdirection(startspot,genmyspotlist,closestzero,map,continuity=False,nope=False):
 		myspotlist=nearestpurge(genmyspotlist(startspot),map,continuity,nope)
@@ -213,12 +220,19 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		return tuple(myspotlist[distlist.index(min(distlist))])
 	def checkcontinuity(start,genmyspotlist,map,end,returnfinalpoint=False,nope=False):
 		bestdirection=findbestdirection(start,genmyspotlist,end,map,True,nope)
+		origbestdirection=tuple(bestdirection)
+		count=0
 		while map[bestdirection[0],bestdirection[1]]!=-1:
 			bestdirection=findbestdirection(bestdirection,genmyspotlist,end,map,True,nope)
 			if list(bestdirection)==list(end):
 				if returnfinalpoint:
 					return [True,bestdirection]
 				return True
+			if list(origbestdirection)==bestdirection:
+				zzzzzzzzzzzzzzz
+			count+=1
+			if count>100:
+				sys.exit('yeah this is just looping...gonna cut it off')
 		if returnfinalpoint:
 			return [False,bestdirection]
 		return False
@@ -272,7 +286,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 	back=pygame.draw.rect(screen,(255,0,0),(0,dims[1]*boxsize,20,20),0)
 	forward=pygame.draw.rect(screen,(255,0,0),(20,dims[1]*boxsize,20,20),0)
 	font=pygame.font.SysFont('Ariel',20)
-	dfont=pygame.font.SysFont('Ariel',12)
+	dfont=pygame.font.SysFont('Ariel',11)
 	#background[4,0]=2
 	spots=[None]*numworkers
 	mostrecentoldspots=[]*numworkers
@@ -280,12 +294,12 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		val=lambda: numpy.random.randint(150,255)
 		return (val(),val(),numpy.random.randint(0,150))
 	def updatemap():
+		for spot in mostrecentoldspots:
+			screen.fill(randcolor(),rectlist[spot[0],spot[1]])
 		for spot in spots:
 			background[spot[0],spot[1]]=background[spot[0],spot[1]]+1
 			screen.fill((0,0,255),rectlist[spot[0],spot[1]])
 			screen.blit(dfont.render(' '+str(spots.index(spot)),1,(0,0,0)),rectlist[spot[0],spot[1]])
-		for spot in mostrecentoldspots:
-			screen.fill(randcolor(),rectlist[spot[0],spot[1]])
 		pygame.display.update()
 	def paused(done=False):
 		screen.fill((0,255,0),pause)
