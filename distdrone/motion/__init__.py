@@ -185,32 +185,36 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		layerspots[4*(layer-1):6*(layer-1)-1]=varyx(mult=-1)
 		layerspots[6*(layer-1):8*(layer-1)-1]=varyy(mult=-1)
 		return layerspots
-	def findwalledge(myspot,wallspot,genmyspotlist,map):
+	def findwalledge(myspot,wallspot,genmyspotlist,map,nope=False):
 		myspotlist=[spot for spot in genmyspotlist(wallspot) if map[spot[0],spot[1]]==-1 and any([map[spot2[0],spot2[1]]!=-1 for spot2 in genmyspotlist(spot)])]
 		fluffspots=set()
 		for spot in myspotlist:
 			for spot2 in genmyspotlist(spot):
-				if map[spot2[0],spot2[1]]!=-1 and checkcontinuity(myspot,genmyspotlist,map,spot2):
+				if map[spot2[0],spot2[1]]!=-1 and checkcontinuity(myspot,genmyspotlist,map,spot2,nope=nope):
 					fluffspots.add(tuple(spot2))
 		return [list(spot) for spot in list(fluffspots)]
-	def nearestpurge(myspotlist,map,continuity=False):
+	def nearestpurge(myspotlist,map,continuity=False,nope=False):
 		listofbadspots=[]
 		for i in range(0,8):
-			if len(map) in myspotlist[i] or -1 in myspotlist[i] or (not continuity and map[myspotlist[i][0],myspotlist[i][1]]==-1):
+			if len(map) in myspotlist[i] or -1 in myspotlist[i] or (not continuity and map[myspotlist[i][0],myspotlist[i][1]]==-1):# or map[myspotlist[i][0],myspotlist[i][1]]>1:
 				listofbadspots.append(myspotlist[i])
 		for i in listofbadspots:
 			myspotlist.remove(i)
+		if nope:
+			for i in range(len(nope)):
+				if nope[i] in myspotlist:
+					myspotlist.remove(nope[i])
 		return myspotlist
-	def findbestdirection(startspot,genmyspotlist,closestzero,map,continuity=False):
-		myspotlist=nearestpurge(genmyspotlist(startspot),map,continuity)
+	def findbestdirection(startspot,genmyspotlist,closestzero,map,continuity=False,nope=False):
+		myspotlist=nearestpurge(genmyspotlist(startspot),map,continuity,nope)
 		distlist=[None]*len(myspotlist)
 		for i in range(0,len(myspotlist)):
 			distlist[i]=sqrt((closestzero[0]-myspotlist[i][0])**2+(closestzero[1]-myspotlist[i][1])**2)
 		return tuple(myspotlist[distlist.index(min(distlist))])
-	def checkcontinuity(start,genmyspotlist,map,end,returnfinalpoint=False):
-		bestdirection=findbestdirection(start,genmyspotlist,end,map,True)
+	def checkcontinuity(start,genmyspotlist,map,end,returnfinalpoint=False,nope=False):
+		bestdirection=findbestdirection(start,genmyspotlist,end,map,True,nope)
 		while map[bestdirection[0],bestdirection[1]]!=-1:
-			bestdirection=findbestdirection(bestdirection,genmyspotlist,end,map,True)
+			bestdirection=findbestdirection(bestdirection,genmyspotlist,end,map,True,nope)
 			if list(bestdirection)==list(end):
 				if returnfinalpoint:
 					return [True,bestdirection]
@@ -223,9 +227,13 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 	dview['nearestpurge']=nearestpurge
 	dview['findwalledge']=findwalledge
 	def nearestzero(myspot,map,nope,genmyspotlist):
-		myspotlist=nearestpurge(genmyspotlist(myspot),map)
+		myspotlist=nearestpurge(genmyspotlist(myspot),map,nope=nope)
 		x,y=numpy.where(map==0)
 		zerospots=zip(x,y)
+		if nope:
+			for i in range(len(nope)):
+				if nope[i] in zerospots:
+					zerospots.remove(nope[i])
 		if len(zerospots)==0:
 			print 'could not find any zeros, will stay put'
 			return myspot
@@ -233,24 +241,24 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		for i in range(0,len(zerospots)):
 			zerodists[i]=sqrt((myspot[0]-zerospots[i][0])**2+(myspot[1]-zerospots[i][1])**2)
 		closestzero=zerospots[zerodists.index(min(zerodists))]
-		bestdirection=findbestdirection(myspot,genmyspotlist,closestzero,map)
-		state,bestdirection2=checkcontinuity(bestdirection,genmyspotlist,map,closestzero,True)
+		bestdirection=findbestdirection(myspot,genmyspotlist,closestzero,map,nope=nope)
+		state,bestdirection2=checkcontinuity(bestdirection,genmyspotlist,map,closestzero,True,nope=nope)
 		if state:
 			return bestdirection
-		fluffspots=findwalledge(myspot,bestdirection2,genmyspotlist,map)
+		fluffspots=findwalledge(myspot,bestdirection2,genmyspotlist,map,nope=nope)
 		possiblebestspots=[]
 		for spot in fluffspots:
-			if checkcontinuity(closestzero,genmyspotlist,map,spot):
+			if checkcontinuity(closestzero,genmyspotlist,map,spot,nope=nope):
 				possiblebestspots.append(spot)
 		if len(possiblebestspots)==0:
 			distlist=[]
 			for spot in fluffspots:
 				distlist.append(sqrt((spot[0]-myspot[0])**2+(spot[1]-myspot[1])**2))
-			return findbestdirection(myspot,genmyspotlist,fluffspots[distlist.index(min(distlist))],map)
+			return findbestdirection(myspot,genmyspotlist,fluffspots[distlist.index(max(distlist))],map,nope=nope)
 		distlist=[]
 		for spot in possiblebestspots:
 			distlist.append(sqrt((spot[0]-myspot[0])**2+(spot[1]-myspot[1])**2)+sqrt((spot[0]-closestzero[0])**2+(spot[1]-closestzero[1])**2))
-		return findbestdirection(myspot,genmyspotlist,possiblebestspots[distlist.index(min(distlist))],map)
+		return findbestdirection(myspot,genmyspotlist,possiblebestspots[distlist.index(min(distlist))],map,nope=nope)
 	dview['nearestzero']=nearestzero
 	dims=(size,size)
 	background=numpy.zeros(dims)
@@ -264,6 +272,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 	back=pygame.draw.rect(screen,(255,0,0),(0,dims[1]*boxsize,20,20),0)
 	forward=pygame.draw.rect(screen,(255,0,0),(20,dims[1]*boxsize,20,20),0)
 	font=pygame.font.SysFont('Ariel',20)
+	dfont=pygame.font.SysFont('Ariel',12)
 	#background[4,0]=2
 	spots=[None]*numworkers
 	mostrecentoldspots=[]*numworkers
@@ -274,6 +283,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		for spot in spots:
 			background[spot[0],spot[1]]=background[spot[0],spot[1]]+1
 			screen.fill((0,0,255),rectlist[spot[0],spot[1]])
+			screen.blit(dfont.render(' '+str(spots.index(spot)),1,(0,0,0)),rectlist[spot[0],spot[1]])
 		for spot in mostrecentoldspots:
 			screen.fill(randcolor(),rectlist[spot[0],spot[1]])
 		pygame.display.update()
@@ -303,6 +313,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 					depth=depth+1
 					for spot in oldspots[-depth]:
 						screen.fill((0,0,255),rectlist[spot[0],spot[1]])
+						screen.blit(dfont.render(' '+str(oldspots[-depth].index(spot)),1,(0,0,0)),rectlist[spot[0],spot[1]])
 					pygame.display.update()
 				elif forward.collidepoint(x2,y2):
 					if depth<2:
@@ -313,6 +324,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 					depth=depth-1
 					for spot in oldspots[-depth]:
 						screen.fill((0,0,255),rectlist[spot[0],spot[1]])
+						screen.blit(dfont.render(' '+str(oldspots[-depth].index(spot)),1,(0,0,0)),rectlist[spot[0],spot[1]])
 					pygame.display.update()
 				elif pause.collidepoint(x2,y2):
 					if done:
@@ -330,6 +342,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 						pygame.display.update()
 					for spot in oldspots[-1]:
 						screen.fill((0,0,255),rectlist[spot[0],spot[1]])
+						screen.blit(dfont.render(' '+str(oldspots[-1].index(spot)),1,(0,0,0)),rectlist[spot[0],spot[1]])
 					pygame.display.update()
 					proceed=1
 			if event2.type==pygame.QUIT:
@@ -567,10 +580,10 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		print 'percent done: '+str(float((background>0).sum())/(size**2)*100)+'%'
 		print str(oldspots[iteration-2])+' >>> '+str(spots)
 		if (background>1).sum()>0 and alert==0:
-			if raw_input("imperfect search. continue? y/n ")=='n':
-				sys.exit("exiting")
-			else:
-				alert=1
+			if wall==0:
+				if raw_input("imperfect search. continue? y/n ")=='n':
+					sys.exit("exiting")
+			alert=1
 		for event in pygame.event.get():
 			if event.type==pygame.QUIT:
 				sys.exit("exiting")
