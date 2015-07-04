@@ -1,5 +1,5 @@
 from IPython.parallel import Client
-import os, sys, pygame
+import os, sys, pygame, Tkinter, tkMessageBox
 from .gears import *
 
 def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
@@ -245,6 +245,8 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 					listofbadspots.append(myspotlist[i])
 			for i in listofbadspots:
 				myspotlist.remove(i)
+			lowestindex=min([map[spot[0],spot[1]] for spot in myspotlist])
+			myspotlist=[spot for spot in myspotlist if map[spot[0],spot[1]]==lowestindex]
 			if len(myspotlist)==0:
 				oaoarairuguin
 			return myspotlist
@@ -325,6 +327,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 	background=numpy.zeros(dims)
 	boxsize=7
 	screen=pygame.display.set_mode((dims[0]*boxsize,dims[1]*boxsize+20))
+	Tkinter.Tk().withdraw()
 	rectlist=numpy.zeros(dims,dtype=object)
 	for i in xrange(dims[0]):
 		for j in xrange(dims[1]):
@@ -427,7 +430,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 			myspotlist.remove(i)
 		return myspotlist
 	dview["purgelist"]=purgelist
-	def edgeseek(center,myspot,map,nope,genmyspotlist):
+	def edgeseek(center,myspot,map,nope,genmyspotlist,counterpoints=False):
 		if type(myspot[0])==tuple:
 			myspot=myspot[0]
 		oktogo=0
@@ -439,7 +442,13 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		#			nope=nope[len(nope)-1]
 		myspotlist=purgelist(myspotlist,map,nope)
 		if len(myspotlist)==0:
-			return [nearestzero(myspot,map,False,genmyspotlist),0]
+			if all([not map[testspot[0],testspot[1]]==0 for testspot in genmyspotlist(myspot)]):
+				return [nearestzero(myspot,map,counterpoints,genmyspotlist),0]
+			else:
+				if counterpoints:
+					return [nearestzero(myspot,map,locklist+counterpoints,genmyspotlist),0]
+				else:
+					return [nearestzero(myspot,map,locklist,genmyspotlist),0]
 		#if len(myspotlist)==1:
 		#	return list(tuple(myspotlist[0]),1)
 		distlist=[None]*len(myspotlist)
@@ -514,10 +523,16 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 	#initialize map w/ clustered drones
 	midspot=tuple([size/2,size/2])
 	midspots=genmyspotlist(midspot)
-	background[midspot[0],midspot[1]]=1 #saying center of release is known
-	screen.fill(randcolor(),rectlist[midspot[0],midspot[1]])
+	midspotseven=[(midspot[0]-1,midspot[1]-1),(midspot[0],midspot[1]-1),(midspot[0]-1,midspot[1]),midspot]
 	if numworkers<=8:
-		spots=midspots[:numworkers]
+		if numworkers<=4 and size%2==0:
+			spots=midspotseven[:numworkers]
+			#midspot=(size/2)*2
+			
+		else:
+			spots=midspots[:numworkers]
+			background[midspot[0],midspot[1]]=1 #saying center of release is known
+			screen.fill(randcolor(),rectlist[midspot[0],midspot[1]])
 		for i in range(numworkers):
 			exec 'alignbias='+dicname+'['+str(i)+']' in globals(), locals()
 			exec 'c[c.ids[i]]["genmyspotlist"]=genmyspotlist'+str(alignbias) in globals(), locals()
@@ -540,6 +555,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		os.system('clear')
 	screen.blit(font.render(' click here to proceed',1,(0,0,0)),pause)
 	pygame.display.update(pause)
+	pygame.display.set_caption("click to make wall")
 	wall=0
 	while True:
 		event=pygame.event.wait()
@@ -569,7 +585,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 	print 'iteration '+str(iteration)
 	print background
 	center=[None,None]
-
+	pygame.display.set_caption("starting")
 	while 0 in background:
 		dview=c[:]
 		mostrecentoldspots=list(spots)
@@ -577,8 +593,8 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 			print 'starting at '+str(spots)
 		#else:
 		#	print str(oldspots[iteration-2])+' >>> '+str(spots)
-		center[0]=sum([x for x,y in spots])/len(spots)
-		center[1]=sum([y for x,y in spots])/len(spots)
+		center[0]=sum([x for x,y in spots])/float(len(spots))
+		center[1]=sum([y for x,y in spots])/float(len(spots))
 		starttime=time.time()
 		dview.scatter('myspot',spots)
 		dview['center']=center
@@ -611,7 +627,7 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 				c[i].execute('[newspot,mylocks]='+algorithm+'(center,myspot,map,locklist,genmyspotlist)')
 				intermid=c[i]['newspot']
 				if intermid in spots:
-					#print "possible meta problem with "+str(c.ids[spots.index(intermid)])
+					print "possible meta problem with "+str(c.ids[spots.index(intermid)])
 					spots[c.ids.index(i)]=intermid
 					c[c.ids[spots.index(intermid)]].execute("locklist.append(newspot)")
 					c[c.ids[spots.index(intermid)]].execute('[newspot,mylocks]='+algorithm+'(center,myspot,map,locklist,genmyspotlist)')
@@ -623,11 +639,16 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 						#print locklist
 						#c[i].execute("locklist=[newspot,]")
 						c[i]["locklist"]=[intermid,]
+						c[i]['counterpoints']=spots
+						print "possible contradiction problem here with "+str(i)+' and '+str(c.ids[spots.index(intermid)])
 						#print c[i]["locklist"]
-						c[i].execute('[newspot,mylocks]='+algorithm+'(center,myspot,map,locklist,genmyspotlist)')
+						#seems to be a problem with the next line and locking. setting locklist to locklist for now
+						#if theres a problem with prediction check call to nearestzero
+						c[i].execute('[newspot,mylocks]='+algorithm+'(center,myspot,map,locklist,genmyspotlist,counterpoints)')
+						c[i]['counterpoints']=False
 						intermid=c[i]['newspot']
 						#print intermid
-						#print "possible contradiction problem here with "+str(i)
+						#print "possible contradiction problem here with "+str(i)+' and '+str(spots.index(intermid))
 						spots[c.ids.index(i)]=intermid
 				else:
 					spots[c.ids.index(i)]=intermid
@@ -636,14 +657,24 @@ def centersearch(size,progo='picluster',clearprompt='n',algorithm='edgeseek'):
 		iteration=iteration+1
 		if clearprompt=='y':
 			os.system('clear')
+		percentdone=str(float((background>0).sum())/(size**2-wall)*100)+'%'
 		print 'iteration '+str(iteration)
 		print background
-		print 'percent done: '+str(float((background>0).sum())/(size**2)*100)+'%'
+		print 'percent done: '+percentdone
+		banner=percentdone
+		if alert:
+			banner=banner+' done, imperfect'
+		else:
+			banner=banner+' done, perfect'
+		pygame.display.set_caption(banner) 
 		print str(oldspots[iteration-2])+' >>> '+str(spots)
 		if (background>1).sum()>0 and alert==0:
-			if wall==0:
-				if raw_input("imperfect search. continue? y/n ")=='n':
-					sys.exit("exiting")
+			#pygame.display.set_caption("
+			#if wall==0:
+				#if raw_input("imperfect search. continue? y/n ")=='n':
+				#	sys.exit("exiting")
+			if tkMessageBox.askyesno("imperfect search","Some element of this search is suboptimal. Pause?"):
+				paused()
 			alert=1
 		for event in pygame.event.get():
 			if event.type==pygame.QUIT:
