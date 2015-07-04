@@ -32,7 +32,7 @@ def readme():
 
 setup(name="distdrone",
 	cmdclass={'install':install},
-	version="1.42",
+	version="1.43",
 	description="package to drive parallel drone swarm",
 	url="https://github.com/isaacrob/distdrone",
 	author="Isaac Robinson",
