@@ -87,7 +87,13 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 		facedetector=cv2.CascadeClassifier("/home/pi/opencv-2.4.9/data/haarcascades/haarcascade_frontalface_alt2.xml")
 	else: 
 		print "something went wrong detecting the system"
+
+	cam=cv2.VideoCapture(0)
+	
+	retval,img=cam.read()
+	gen.dumptimes(img,scale=1.1)
 	times=gen.loadtimes()
+
 	scale=1.1
 	dview["scale"]=scale
 	for i in ippids:
@@ -210,11 +216,6 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 			ystart=img.shape[1]/4
 			sumlist[i]=img[xstart:(xstart*3),ystart:(ystart*3),:].sum()
 		return sumlist
-	
-	cam=cv2.VideoCapture(0)
-	
-	retval,img=cam.read()
-	gen.dumptimes(img,scale=1.1)
 	
 	sumlist=calibcam(n,cam)
 	std=stats.tstd(sumlist)
