@@ -5,6 +5,8 @@ from math import log
 from IPython.parallel import Client
 from scipy import stats
 import numpy as np
+from picamera import PiCamera
+from picamera.array import PiRGBArray
 
 os.chdir("/home/pi")
 
@@ -87,8 +89,22 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 		facedetector=cv2.CascadeClassifier("/home/pi/opencv-2.4.9/data/haarcascades/haarcascade_frontalface_alt2.xml")
 	else: 
 		print "something went wrong detecting the system"
-
-	cam=cv2.VideoCapture(0)
+	
+	try:
+		class cv2picam(PiCamera):
+			def __init__(self):
+				self.cam=PiCamera()
+				self.rawCapture=PiRGBArray(self.cam)
+			def read(self):
+				self.cam.capture(self.rawCapture,format="bgr")
+				img=self.rawCapture.array
+				if img:
+					return [True,img]
+				else:
+					return [False,None]
+		cam=cv2picam()
+	else:
+		cam=cv2.VideoCapture(0)
 	
 	retval,img=cam.read()
 	gen.dumptimes(img,scale=1.1)
