@@ -94,7 +94,9 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 		class cv2picam(PiCamera):
 			def __init__(self):
 				self.cam=PiCamera()
-				self.rawCapture=PiRGBArray(self.cam)
+				self.cam.start_preview()
+				time.sleep(.1)
+				self.stream=PiRGBArray(self.cam)
 			def read(self):
 				self.cam.capture(self.rawCapture,format="bgr")
 				img=self.rawCapture.array
