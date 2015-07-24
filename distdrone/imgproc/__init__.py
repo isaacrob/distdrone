@@ -1,6 +1,6 @@
 #from .imgproc import *
 import gentimedist as gen
-import cv2, time, sys, cPickle, zmq, os, copy, psutil
+import cv2, time, sys, cPickle, zmq, os, copy, psutil, io
 from math import log
 from IPython.parallel import Client
 from scipy import stats
@@ -96,10 +96,12 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 				self.cam=PiCamera()
 				self.cam.start_preview()
 				time.sleep(.1)
-				self.stream=PiRGBArray(self.cam)
+				self.stream=io.BytesIO()
+				self.capturestream=generator(self.cam.capture_continuous(self.stream,format="bgr"))
 			def read(self):
-				self.cam.capture(self.rawCapture,format="bgr")
-				img=self.rawCapture.array
+				self.stream.seek(0)
+				img=self.stream.read()
+				print img
 				if not len(img)==1:
 					return [True,img]
 				else:
