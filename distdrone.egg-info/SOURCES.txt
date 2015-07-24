@@ -5,6 +5,7 @@ bin/centersearch
 bin/installdronedeps
 bin/testpredictor
 bin/trigger
+bin/trigger2
 distdrone/__init__.py
 distdrone/text.py
 distdrone.egg-info/PKG-INFO

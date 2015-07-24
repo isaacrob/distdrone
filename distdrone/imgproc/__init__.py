@@ -90,18 +90,20 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False):
 	else: 
 		print "something went wrong detecting the system"
 	
-	width=1024
-	height=768
+	width=720
+	height=480
 	
+	stream=io.BytesIO()	
 	with PiCamera() as cam:
 		cam.resolution=(width,height)
 		cam.start_preview()
 		time.sleep(2)
-		cam.capture(img,"rgb")
-	img.seek(0)
+		cam.capture(stream,"rgb")
+	stream.seek(0)
 	fwidth = (width + 31) // 32 * 32
 	fheight = (height + 15) // 16 * 16
-	img=np.fromfile(img, dtype=np.uint8).reshape((fheight, fwidth, 3))[:height, :width, :]
+	img=np.fromstring(stream.getvalue(), dtype=np.uint8).reshape((fheight, fwidth, 3))[:height, :width, :]
+	print "got first image"
 	gen.dumptimes(img,scale=1.1)
 	times=gen.loadtimes()
 
@@ -219,26 +221,32 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False):
 		runstate.close()
 		return finallist
 	
-	def calibcam(n):
+	sumlist=[None]*n
+	def calibcam(n,sumlist):
 		stream=io.BytesIO()
-		sumlist=[None]*n
 		for i in range(n):
 			yield stream
 			stream.seek(0)
-			img=cv2.imread(stream)
+			fwidth = (width + 31) // 32 * 32
+		        fheight = (height + 15) // 16 * 16
+			starttime=time.time()
+			img=np.fromstring(stream.getvalue(), dtype=np.uint8).reshape((fheight, fwidth, 3))[:height, :width, :]
+			print str((time.time()-starttime)*1000)+" ms for reading the image"
 			xstart=img.shape[0]/4
 			ystart=img.shape[1]/4
+			starttime=time.time()
 			sumlist[i]=img[xstart:(xstart*3),ystart:(ystart*3),:].sum()
+			print str((time.time()-starttime)*1000)+" ms"
 			stream.seek(0)
 			stream.truncate()
-		return sumlist
 	
 	print "calibrating"
-	cam=PiCamera()
-	cam.resolution=(width,height)
-	camera.framerate=80
-	time.sleep(2)
-	sumlist=cam.capture_sequence(calibcam(),"rgb",use_video_port=True)
+	with PiCamera() as cam:
+		cam.resolution=(width,height)
+		cam.framerate=80
+		time.sleep(2)
+		cam.capture_sequence(calibcam(n,sumlist),"rgb",use_video_port=True)
+	print sumlist
 	std=stats.tstd(sumlist)
 	avg=sum(sumlist)/n
 	framenum=0
@@ -247,14 +255,23 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False):
 	print "starting detection"
 	
 	def dodetection():
+		print "creating stream"
 		stream=io.BytesIO()
+		print "created stream, entering loop"
 		while True:
 			yield stream
+			print "accessed the stream"
+			loopstarttime=time.time()
 			stream.seek(0)
-			img=cv2.imread(stream)
+			fwidth = (width + 31) // 32 * 32
+			fheight = (height + 15) // 16 * 16
+			print "getting image"
+			img = np.fromstring(stream.getvalue(), dtype=np.uint8).reshape((fheight, fwidth, 3))[:height, :width, :]
+			print "got the image, analyzing it"
 			xstart=img.shape[0]/4
 			ystart=img.shape[1]/4
 			thisz=(img[xstart:(xstart*3),ystart:(ystart*3),:].sum()-avg)/std
+			print thisz
 			#while True:
 			#	print "testing for sleep needed"
 			#	try:
@@ -355,8 +372,14 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False):
 					predictdist(numnodes,times,numsizes,c)
 			stream.seek(0)
 			stream.truncate(0)
-	
-	cam.capture_sequence(dodetection(),"rgb",use_video_ports=True)
+			print str((time.time()-loopstarttime)*1000)+" ms for this detection check"	
+
+        with PiCamera() as cam:
+                cam.resolution=(width,height)
+                cam.framerate=80
+                time.sleep(2)
+		print "got the camera going again, trying to actually run"
+		cam.capture_sequence(dodetection(),"rgb",use_video_ports=True)
 		
 
 def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False):
