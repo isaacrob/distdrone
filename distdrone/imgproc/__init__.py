@@ -98,7 +98,7 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 			def read(self):
 				self.cam.capture(self.rawCapture,format="bgr")
 				img=self.rawCapture.array
-				if img:
+				if not len(img)==1:
 					return [True,img]
 				else:
 					return [False,None]
