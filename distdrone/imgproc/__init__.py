@@ -103,8 +103,10 @@ def findfaceswithtrigger(profile='picluster',threshold=15,n=100,serial='no',show
 				else:
 					return [False,None]
 		cam=cv2picam()
-	else:
+		print "using pi camera"
+	except:
 		cam=cv2.VideoCapture(0)
+		print "using other camera"
 	
 	retval,img=cam.read()
 	gen.dumptimes(img,scale=1.1)
