@@ -178,6 +178,7 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,w
 		testlen=len(facelist)
 		origlist=facelist
 		testlennew=0
+		print "faces found: "
 		print len(origlist)
 		while not testlennew==testlen:
 			testlen=len(facelist)
@@ -202,6 +203,7 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,w
 			donttest=[]
 		finallist=facelist
 		duptime=time.time()-duptime
+		print "faces found after removing likely duplicates: "
 		print len(finallist)
 		starttime=time.time()-starttime
 		print "min/avg/max/regtime/tottime: "+str(min(thistimesremote))+"/"+str(sum(thistimesremote)/numnodes)+"/"+str(max(thistimesremote))+"/"+str(starttime)+"/"+str(sum(thistimesremote))
