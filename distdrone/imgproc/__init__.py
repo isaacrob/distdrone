@@ -20,8 +20,6 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,w
 	runstate.close()
 	print os.getpid()
 
-	inittrigger=0
-
 	c=Client(profile=profile)
 	dview=c[:]
 	numnodes=len(c.ids)
@@ -207,13 +205,23 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,w
 		runstate.close()
 		return finallist
 		
-	def stdtrigger(img,std=std,avg=avg,threshold=15):
+	def stdtrigger(img,framenum=1,threshold=threshold,message=False):
 		try:
 			global avg
 			global std
+			global xstart
+			xstart=width/4
+			global ystart
+			ystart=height/4
+			global sumlist
 		except:
-			print "error getting avg and std in stdtrigger, probably just first call"
-		if not inittrigger:
+			sys.exit("error getting globals in stdtrigger")
+		if message:
+			if message=="update":
+				sumlist[0]=img[xstart:(xstart*3),ystart:(ystart*3),:].sum()
+                                std=stats.tstd(sumlist)
+                                avg=sum(sumlist)/n
+				return
 			sumlist=[None]*n
 			def calibcam(n,sumlist):
 				stream=io.BytesIO()
@@ -225,8 +233,8 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,w
 					#starttime=time.time()
 					img=np.fromstring(stream.getvalue(), dtype=np.uint8).reshape((fheight, fwidth, 3))[:height, :width, :]
 					#print str((time.time()-starttime)*1000)+" ms for reading the image"
-					xstart=img.shape[0]/4
-					ystart=img.shape[1]/4
+					#xstart=img.shape[0]/4
+					#ystart=img.shape[1]/4
 					#starttime=time.time()
 					sumlist[i]=img[xstart:(xstart*3),ystart:(ystart*3),:].sum()
 					#print str((time.time()-starttime)*1000)+" ms"
@@ -243,22 +251,33 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,w
 				cam.capture_sequence(calibcam(n,sumlist),"rgb",use_video_port=True)
 			std=stats.tstd(sumlist)
 			avg=sum(sumlist)/n
-			inittrigger=1
-		xstart=img.shape[0]/4
-		ystart=img.shape[1]/4
+			return
 		thisz=(img[xstart:(xstart*3),ystart:(ystart*3),:].sum()-avg)/std
-		print "\nsomething weird, zscore="+str(thisz)+" at "+time.strftime("%a, %d %b %H:%M:%S", time.localtime())
-		return abs(thisz)>threshold
+		#print thisz
+		if abs(thisz)>threshold:
+			print "\nsomething weird, zscore="+str(thisz)+" at "+time.strftime("%a, %d %b %H:%M:%S", time.localtime())
+			return True
+
+                if framenum%10==0:
+                        sumlist[0]=img[xstart:(xstart*3),ystart:(ystart*3),:].sum()
+                        std=stats.tstd(sumlist)
+                        avg=sum(sumlist)/n
+
+		return False
 	
 	framenum=0
 	oldids=ippids
 	
+	print "calibrating chosen trigger..."
+
+	stdtrigger(None,message="init")
+
 	print "\nstarting detection"
 	
 	with PiCamera() as cam:
 		cam.resolution=(width,height)
 		cam.framerate=80
-		time.sleep(2)
+		time.sleep(.3)
 		print "creating stream"
 		stream=io.BytesIO()
 		print "created stream, entering loop"
@@ -273,7 +292,7 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,w
 			#print "getting image"
 			img = np.fromstring(stream.getvalue(), dtype=np.uint8).reshape((fheight, fwidth, 3))[:height, :width, :]
 			#print "got the image, analyzing it"
-			if stdtrigger(img,std,avg,threshold):
+			if stdtrigger(img,framenum,threshold):
 				print "searching for faces..."
 				newimg=img.copy()
 				faces=findfaces(newimg,scale,serial)
@@ -289,14 +308,9 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,w
 						cv2.imshow("obj not found",newimg)
 				if show==True:
 					cv2.waitKey(1)
-				sumlist[0]=img[xstart:(xstart*3),ystart:(ystart*3),:].sum()
-				std=stats.tstd(sumlist)
-				avg=sum(sumlist)/n
+				stdtrigger(img,message="update")
 			framenum=framenum+1
-			if framenum%10==0:
-				sumlist[0]=img[xstart:(xstart*3),ystart:(ystart*3),:].sum()
-				std=stats.tstd(sumlist)
-				avg=sum(sumlist)/n
+			
 			if framenum%(10*numnodes)==0:
 				if not len(c.ids)-len(oldids)==rejects:
 					print "cluster changed"
