@@ -14,7 +14,7 @@ def gentimedist(imgname,slices=False,scale=1.1,invert=0):
 			img=imgname
 		haarface=cv2.CascadeClassifier("/home/pi/opencv-2.4.9/data/haarcascades/haarcascade_frontalface_alt2.xml")
 	#numstages=10
-	print "got here (yet again)"
+	#print "got here (yet again)"
 	try:
 		sp=img.shape
 		sp=min(sp[:1])
@@ -45,6 +45,9 @@ def gentimedist(imgname,slices=False,scale=1.1,invert=0):
 		times[i]=(time.time()-times[i])
 		if invert:
 			times[i]=1/times[i]**2
+		sys.stdout.write("\r"+str(round(float(i+1)*100/(slices-1),2))+"%          ")
+		sys.stdout.flush()
+	print ''
 	print max(times)
 	print min(times)
 	print sum(times)/len(times)
