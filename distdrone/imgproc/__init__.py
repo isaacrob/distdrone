@@ -238,7 +238,7 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,w
 			#print str((time.time()-starttime)*1000)+" ms"
 			stream.seek(0)
 			stream.truncate()
-			sys.stdout.write("\r"+str(float(i)*100/n)+"%        ")
+			sys.stdout.write("\r"+str(float(i+1)*100/n)+"%        ")
 			sys.stdout.flush()
 	
 	print "calibrating"
@@ -252,7 +252,7 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,w
 	framenum=0
 	oldids=ippids
 	
-	print "starting detection"
+	print "\nstarting detection"
 	
 	with PiCamera() as cam:
 		cam.resolution=(width,height)
