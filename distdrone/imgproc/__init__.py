@@ -10,7 +10,7 @@ from picamera.array import PiRGBArray
 
 os.chdir("/home/pi")
 
-def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,width=720,height=480,scale=1.1):
+def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,width=720,height=480,scale=1.1,cascade="haarcascade_frontalface_alt2.xml"):
 	import sys, cPickle, os,cv2,time,math,signal
 	pidfile=open('mypythonpid','w')
 	cPickle.dump(os.getpid(),pidfile)
@@ -19,28 +19,13 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,w
 	cPickle.dump(0,runstate)
 	runstate.close()
 	print os.getpid()
-	#context=zmq.Context()
-	#pubsocket=context.socket(zmq.PUB)
-	#port=5556
-	#pubsocket.bind("tcp://*:%s"%port)
-	#subsocket=context.socket(zmq.SUB)
-	#if sys.platform=='darwin':
-	#	ips=open("/Users/isaac/Code/parastuff/ipaddresses").read()
-	#if sys.platform=='linux2':
-	#	ips=open("/home/pi/ipaddresses").read()
-	#splitips=ips.split("\n")
-	#print splitips
-	#for ip in splitips:
-	#	if ip:
-	#		subsocket.connect("tcp://%s:%s"%(ip,port))
-	#subsocket.setsockopt(zmq.SUBSCRIBE,"need quiet?")
+
+	inittrigger=0
 
 	c=Client(profile=profile)
 	dview=c[:]
 	numnodes=len(c.ids)
 	dview.block=False
-	#dview.execute('import cv2,sys,time,math,os,cPickle,signal')
-	#dview.execute("mypid=os.getpid()")
 	def getmypid():
 		import cPickle, os
 		try:
@@ -84,9 +69,9 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,w
 	print "configured for this pi by rejecting a certain engine"
 	#print sys.platform
 	if sys.platform=='darwin':
-		facedetector=cv2.CascadeClassifier("/usr/local/Cellar/opencv/2.4.9/share/OpenCV/haarcascades/haarcascade_frontalface_alt2.xml")
+		facedetector=cv2.CascadeClassifier("/usr/local/Cellar/opencv/2.4.9/share/OpenCV/haarcascades/"+cascade)
 	elif sys.platform=='linux2':
-		facedetector=cv2.CascadeClassifier("/home/pi/opencv-2.4.9/data/haarcascades/haarcascade_frontalface_alt2.xml")
+		facedetector=cv2.CascadeClassifier("/home/pi/opencv-2.4.9/data/haarcascades/"+cascade)
 	else: 
 		print "something went wrong detecting the system"
 
@@ -219,36 +204,50 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,w
 		cPickle.dump(0,runstate)
 		runstate.close()
 		return finallist
+		
+	def stdtrigger(img,std=std,avg=avg,threshold=15):
+		try:
+			global avg
+			global std
+		except:
+			print "error getting avg and std in stdtrigger, probably just first call"
+		if not inittrigger:
+			sumlist=[None]*n
+			def calibcam(n,sumlist):
+				stream=io.BytesIO()
+				for i in range(n):
+					yield stream
+					stream.seek(0)
+					fwidth = (width + 31) // 32 * 32
+				        fheight = (height + 15) // 16 * 16
+					#starttime=time.time()
+					img=np.fromstring(stream.getvalue(), dtype=np.uint8).reshape((fheight, fwidth, 3))[:height, :width, :]
+					#print str((time.time()-starttime)*1000)+" ms for reading the image"
+					xstart=img.shape[0]/4
+					ystart=img.shape[1]/4
+					#starttime=time.time()
+					sumlist[i]=img[xstart:(xstart*3),ystart:(ystart*3),:].sum()
+					#print str((time.time()-starttime)*1000)+" ms"
+					stream.seek(0)
+					stream.truncate()
+					sys.stdout.write("\r"+str(float(i+1)*100/n)+"%        ")
+					sys.stdout.flush()
 	
-	sumlist=[None]*n
-	def calibcam(n,sumlist):
-		stream=io.BytesIO()
-		for i in range(n):
-			yield stream
-			stream.seek(0)
-			fwidth = (width + 31) // 32 * 32
-		        fheight = (height + 15) // 16 * 16
-			#starttime=time.time()
-			img=np.fromstring(stream.getvalue(), dtype=np.uint8).reshape((fheight, fwidth, 3))[:height, :width, :]
-			#print str((time.time()-starttime)*1000)+" ms for reading the image"
-			xstart=img.shape[0]/4
-			ystart=img.shape[1]/4
-			#starttime=time.time()
-			sumlist[i]=img[xstart:(xstart*3),ystart:(ystart*3),:].sum()
-			#print str((time.time()-starttime)*1000)+" ms"
-			stream.seek(0)
-			stream.truncate()
-			sys.stdout.write("\r"+str(float(i+1)*100/n)+"%        ")
-			sys.stdout.flush()
+			print "calibrating stdtrigger"
+			with PiCamera() as cam:
+				cam.resolution=(width,height)
+				cam.framerate=80
+				time.sleep(.3)
+				cam.capture_sequence(calibcam(n,sumlist),"rgb",use_video_port=True)
+			std=stats.tstd(sumlist)
+			avg=sum(sumlist)/n
+			inittrigger=1
+		xstart=img.shape[0]/4
+		ystart=img.shape[1]/4
+		thisz=(img[xstart:(xstart*3),ystart:(ystart*3),:].sum()-avg)/std
+		print "\nsomething weird, zscore="+str(thisz)+" at "+time.strftime("%a, %d %b %H:%M:%S", time.localtime())
+		return abs(thisz)>threshold
 	
-	print "calibrating"
-	with PiCamera() as cam:
-		cam.resolution=(width,height)
-		cam.framerate=80
-		time.sleep(.3)
-		cam.capture_sequence(calibcam(n,sumlist),"rgb",use_video_port=True)
-	std=stats.tstd(sumlist)
-	avg=sum(sumlist)/n
 	framenum=0
 	oldids=ippids
 	
@@ -272,55 +271,15 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,w
 			#print "getting image"
 			img = np.fromstring(stream.getvalue(), dtype=np.uint8).reshape((fheight, fwidth, 3))[:height, :width, :]
 			#print "got the image, analyzing it"
-			xstart=img.shape[0]/4
-			ystart=img.shape[1]/4
-			thisz=(img[xstart:(xstart*3),ystart:(ystart*3),:].sum()-avg)/std
-			#print thisz
-			#while True:
-			#	print "testing for sleep needed"
-			#	try:
-			#		if subsocket.recv(flags=zmq.NOBLOCK)=="need quite? yes":
-			#			print "need sleep"
-			#			while True:
-			#				try:
-			#					if subsocket.recv(flags=zmq.NOBLOCK)=="need quite? not anymore":
-			#						break
-			#				except:
-			#					pass
-			#				time.sleep(.5)
-			#	except:
-			#		break
-			if abs(thisz)>threshold:
-				print "\nsomething weird, zscore="+str(thisz)+" at "+time.strftime("%a, %d %b %H:%M:%S", time.localtime())
-				#time.sleep(.5)
-			#	pubsocket.send("need quiet? yes")
-				#retval,newimg=cam.read() #works well on mac, maybe not pis...
-				#if not len(c.ids)==len(oldids): #done periodically, not ideal to update here...
-				#	print "cluster changed"
-				#	numnodes=len(c.ids)
-				#	dview=c[:]
-				#	print "repredicting even distribution..."
-				#	predictdist(numnodes,times,numsizes,c)
-				#	for id in c.ids:
-				#		if id not in oldids:
-				#			c[id].execute('import cv2,sys,time,math,os,cPickle,signal;myfaces=[]')
-				#			c[id]['getrunstate']=getrunstate
-				#			c[id]['getmypid']=getmypid
-				#			c[id]['scale']=scale
-				#			c[id].execute('haarface=cv2.CascadeClassifier("/home/pi/opencv-2.4.9/data/haarcascades/haarcascade_frontalface_alt2.xml")')
-						#else:
-						#	c[id].execute('myfaces=[]')
-				#	oldids=c.ids
+			if stdtrigger(img,std,avg,threshold):
 				print "searching for faces..."
 				newimg=img.copy()
 				faces=findfaces(newimg,scale,serial)
-			#	pubsocket.send("need quiet? not anymore")
 				if len(faces)>0:
 					print "FOUND A FACEZ!!!!!11!"
 					if show==True:
 						for (x,y,h,w) in faces:
 							cv2.rectangle(newimg,(x,y),(x+w,y+h),(0,255,255),1)
-						#cv2.imshow("obj num "+str(i),newimg)
 						cv2.imshow("obj found",newimg)
 				else:
 					print "no facez :("
@@ -331,22 +290,17 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,w
 				sumlist[0]=img[xstart:(xstart*3),ystart:(ystart*3),:].sum()
 				std=stats.tstd(sumlist)
 				avg=sum(sumlist)/n
-			#else:
-			#	pubsocket.send("need quiet? no")
 			framenum=framenum+1
 			if framenum%10==0:
 				sumlist[0]=img[xstart:(xstart*3),ystart:(ystart*3),:].sum()
 				std=stats.tstd(sumlist)
 				avg=sum(sumlist)/n
-			#if framenum%100==0:
-			#	print framenum
 			if framenum%(10*numnodes)==0:
 				if not len(c.ids)-len(oldids)==rejects:
 					print "cluster changed"
 					numnodes=len(oldids)
 					dview=c[:]
 					print "repredicting even distribution..."
-					#predictdist(numnodes,times,numsizes,c)
 					for id in c.ids:
 						if id not in oldids:
 							c[id].execute('import cv2,sys,time,math,os,cPickle,signal;myfaces=[]')
