@@ -10,7 +10,7 @@ from picamera.array import PiRGBArray
 
 os.chdir("/home/pi")
 
-def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False):
+def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False,width=720,height=480,scale=1.1):
 	import sys, cPickle, os,cv2,time,math,signal
 	pidfile=open('mypythonpid','w')
 	cPickle.dump(os.getpid(),pidfile)
@@ -82,32 +82,31 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False):
 	numnodes=len(dview)
 	rejects=len(c.ids)-numnodes
 	print "configured for this pi by rejecting a certain engine"
-	print sys.platform
+	#print sys.platform
 	if sys.platform=='darwin':
 		facedetector=cv2.CascadeClassifier("/usr/local/Cellar/opencv/2.4.9/share/OpenCV/haarcascades/haarcascade_frontalface_alt2.xml")
 	elif sys.platform=='linux2':
 		facedetector=cv2.CascadeClassifier("/home/pi/opencv-2.4.9/data/haarcascades/haarcascade_frontalface_alt2.xml")
 	else: 
 		print "something went wrong detecting the system"
-	
-	width=720
-	height=480
-	
+
 	stream=io.BytesIO()	
 	with PiCamera() as cam:
 		cam.resolution=(width,height)
 		cam.start_preview()
 		time.sleep(2)
 		cam.capture(stream,"rgb")
+		cam.stop_preview()
 	stream.seek(0)
 	fwidth = (width + 31) // 32 * 32
 	fheight = (height + 15) // 16 * 16
 	img=np.fromstring(stream.getvalue(), dtype=np.uint8).reshape((fheight, fwidth, 3))[:height, :width, :]
 	print "got first image"
-	gen.dumptimes(img,scale=1.1)
+	print "generating time distribution for image"
+	gen.dumptimes(img,scale=scale)
 	times=gen.loadtimes()
 
-	scale=1.1
+	#scale=1.1
 	dview["scale"]=scale
 	for i in ippids:
 		c[i].execute('if sys.platform=="darwin": haarface=cv2.CascadeClassifier("/usr/local/Cellar/opencv/2.4.9/share/OpenCV/haarcascades/haarcascade_frontalface_alt2.xml")')
@@ -239,15 +238,15 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False):
 			#print str((time.time()-starttime)*1000)+" ms"
 			stream.seek(0)
 			stream.truncate()
-			print str(float(i)*100/n)+"%"
+			sys.stdout.write("\r"+str(float(i)*100/n)+"%        ")
+			sys.stdout.flush()
 	
 	print "calibrating"
 	with PiCamera() as cam:
 		cam.resolution=(width,height)
 		cam.framerate=80
-		time.sleep(2)
+		time.sleep(.3)
 		cam.capture_sequence(calibcam(n,sumlist),"rgb",use_video_port=True)
-	print sumlist
 	std=stats.tstd(sumlist)
 	avg=sum(sumlist)/n
 	framenum=0
@@ -262,7 +261,10 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False):
 		print "creating stream"
 		stream=io.BytesIO()
 		print "created stream, entering loop"
-		for foo in cam.capture_continuous(stream,"rgb"):
+		imgstarttime=time.time()
+		for foo in cam.capture_continuous(stream,"rgb",use_video_port=True):
+			#print str((time.time()-imgstarttime)*1000)+" ms to get image"
+			imgtotaltime=(time.time()-imgstarttime)*1000
 			loopstarttime=time.time()
 			stream.seek(0)
 			fwidth = (width + 31) // 32 * 32
@@ -289,7 +291,7 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False):
 			#	except:
 			#		break
 			if abs(thisz)>threshold:
-				print "something weird, zscore="+str(thisz)
+				print "\nsomething weird, zscore="+str(thisz)+" at "+time.strftime("%a, %d %b %H:%M:%S", time.localtime())
 				#time.sleep(.5)
 			#	pubsocket.send("need quiet? yes")
 				#retval,newimg=cam.read() #works well on mac, maybe not pis...
@@ -375,7 +377,11 @@ def picamtrigger(profile='picluster',threshold=15,n=100,serial='no',show=False):
 					predictdist(numnodes,times,numsizes,c)
 			stream.seek(0)
 			stream.truncate(0)
-			print str((time.time()-loopstarttime)*1000)+" ms for this detection check"	
+			looptotaltime=(time.time()-loopstarttime)*1000
+			detectfreq=round(1000/(looptotaltime+imgtotaltime),2)
+			sys.stdout.write("\r"+str(int(looptotaltime))+" ms for detection, "+str(int(imgtotaltime))+" ms for image, running at "+str(detectfreq)+" hz              ")
+			sys.stdout.flush()
+			imgstarttime=time.time()	
 
         #with PiCamera() as cam:
          #       cam.resolution=(width,height)
