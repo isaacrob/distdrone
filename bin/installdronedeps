@@ -1,10 +1,11 @@
 #!/usr/bin/env sh
+cd ~/
 echo "setting up swap space"
 sudo dphys-swapfile setup
-sudo swapon /var/swap
+echo "sudo swapon /var/swap" >> .bashrc
+source .bashrc
 
 sudo apt-get -y install build-essential gfortran cmake git libgtk2.0-dev pkg-config python-dev python-numpy libavcodec-dev libavformat-dev libswscale-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libblas-dev liblapack-dev
-cd ~/
 wget http://downloads.sourceforge.net/project/opencvlibrary/opencv-unix/2.4.9/opencv-2.4.9.zip
 unzip opencv-2.4.9.zip
 cd opencv-2.4.9
